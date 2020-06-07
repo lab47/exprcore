@@ -16,8 +16,9 @@ func TestSerialization(t *testing.T) {
 		"n": starlark.MakeInt(2),
 	}
 	const src = `
-def mul(a, b):
+def mul(a, b) {
     return a * b
+}
 
 y = mul(x, n)
 `
@@ -54,7 +55,7 @@ y = mul(x, n)
 		t.Fatalf("newProg.Init call returned err %v, want *EvalError", err)
 	}
 	const want = `Traceback (most recent call last):
-  mul.star:5:8: in <toplevel>
+  mul.star:6:8: in <toplevel>
   mul.star:3:14: in mul
 Error: unknown binary op: string * NoneType`
 	if got := evalErr.Backtrace(); got != want {

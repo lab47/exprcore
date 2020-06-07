@@ -78,6 +78,7 @@ const (
 	LTLT_EQ       // <<=
 	GTGT_EQ       // >>=
 	STARSTAR      // **
+	ARROW         // =>
 
 	// Keywords
 	AND
@@ -163,6 +164,7 @@ var tokenNames = [...]string{
 	LTLT_EQ:       "<<=",
 	GTGT_EQ:       ">>=",
 	STARSTAR:      "**",
+	ARROW:         "=>",
 	AND:           "and",
 	BREAK:         "break",
 	CONTINUE:      "continue",
@@ -244,6 +246,8 @@ type scanner struct {
 	keepComments   bool      // accumulate comments in slice
 	lineComments   []Comment // list of full line comments (if keepComments)
 	suffixComments []Comment // list of suffix comments (if keepComments)
+
+	insertSemi bool // insert a semicolon before next newline
 
 	readline func() ([]byte, error) // read next line of input (REPL only)
 }
@@ -460,70 +464,80 @@ func (sc *scanner) nextToken(val *tokenValue) Token {
 start:
 	var c rune
 
+	insertSemi := false
+
+	// Replace the value with the updated on on every time through
+	defer func() {
+		sc.insertSemi = insertSemi
+	}()
+
 	// Deal with leading spaces and indentation.
 	blank := false
-	savedLineStart := sc.lineStart
-	if sc.lineStart {
-		sc.lineStart = false
-		col := 0
-		for {
-			c = sc.peekRune()
-			if c == ' ' {
-				col++
-				sc.readRune()
-			} else if c == '\t' {
-				const tab = 8
-				col += int(tab - (sc.pos.Col-1)%tab)
-				sc.readRune()
-			} else {
-				break
-			}
-		}
-
-		// The third clause matches EOF.
-		if c == '#' || c == '\n' || c == 0 {
-			blank = true
-		}
-
-		// Compute indentation level for non-blank lines not
-		// inside an expression.  This is not the common case.
-		if !blank && sc.depth == 0 {
-			cur := sc.indentstk[len(sc.indentstk)-1]
-			if col > cur {
-				// indent
-				sc.dents++
-				sc.indentstk = append(sc.indentstk, col)
-			} else if col < cur {
-				// outdent(s)
-				for len(sc.indentstk) > 0 && col < sc.indentstk[len(sc.indentstk)-1] {
-					sc.dents--
-					sc.indentstk = sc.indentstk[:len(sc.indentstk)-1] // pop
-				}
-				if col != sc.indentstk[len(sc.indentstk)-1] {
-					sc.error(sc.pos, "unindent does not match any outer indentation level")
+	/*
+		savedLineStart := sc.lineStart
+		if sc.lineStart {
+			sc.lineStart = false
+			col := 0
+			for {
+				c = sc.peekRune()
+				if c == ' ' {
+					col++
+					sc.readRune()
+				} else if c == '\t' {
+					const tab = 8
+					col += int(tab - (sc.pos.Col-1)%tab)
+					sc.readRune()
+				} else {
+					break
 				}
 			}
-		}
-	}
+
+			// The third clause matches EOF.
+			if c == '#' || c == '\n' || c == 0 {
+				blank = true
+			}
+
+			// Compute indentation level for non-blank lines not
+			// inside an expression.  This is not the common case.
+			if false { // !blank { //  && sc.depth == 0 {
+				cur := sc.indentstk[len(sc.indentstk)-1]
+				if col > cur {
+					// indent
+					sc.dents++
+					sc.indentstk = append(sc.indentstk, col)
+				} else if col < cur {
+					// outdent(s)
+					for len(sc.indentstk) > 0 && col < sc.indentstk[len(sc.indentstk)-1] {
+						sc.dents--
+						sc.indentstk = sc.indentstk[:len(sc.indentstk)-1] // pop
+					}
+					if col != sc.indentstk[len(sc.indentstk)-1] {
+						sc.error(sc.pos, "unindent does not match any outer indentation level")
+					}
+				}
+			}
+	*/
 
 	// Return saved indentation tokens.
-	if sc.dents != 0 {
-		sc.startToken(val)
-		sc.endToken(val)
-		if sc.dents < 0 {
-			sc.dents++
-			return OUTDENT
-		} else {
-			sc.dents--
-			return INDENT
+	/*
+		if sc.dents != 0 {
+			sc.startToken(val)
+			sc.endToken(val)
+			if sc.dents < 0 {
+				sc.dents++
+				return OUTDENT
+			} else {
+				sc.dents--
+				return INDENT
+			}
 		}
-	}
+	*/
 
 	// start of line proper
 	c = sc.peekRune()
 
 	// Skip spaces.
-	for c == ' ' || c == '\t' {
+	for c == ' ' || c == '\t' || (c == '\n' && !sc.insertSemi) || c == '\r' {
 		sc.readRune()
 		c = sc.peekRune()
 	}
@@ -538,6 +552,7 @@ start:
 			sc.readRune()
 			c = sc.peekRune()
 		}
+
 		if sc.keepComments {
 			sc.endToken(val)
 			if blank {
@@ -546,53 +561,68 @@ start:
 				sc.suffixComments = append(sc.suffixComments, Comment{val.pos, val.raw})
 			}
 		}
+
+		goto start
 	}
 
 	// newline
 	if c == '\n' {
+		// Only seen if insertSemi was true because otherwise the loop above will eat newlines
 		sc.lineStart = true
 
 		// Ignore newlines within expressions (common case).
-		if sc.depth > 0 {
-			sc.readRune()
-			goto start
-		}
+		/*
+			if sc.depth > 0 {
+				sc.readRune()
+				goto start
+			}
+		*/
 
 		// Ignore blank lines, except in the REPL,
 		// where they emit OUTDENTs and NEWLINE.
-		if blank {
-			if sc.readline == nil {
-				sc.readRune()
-				goto start
-			} else if len(sc.indentstk) > 1 {
-				sc.dents = 1 - len(sc.indentstk)
-				sc.indentstk = sc.indentstk[:1]
-				goto start
+		/*
+			if blank {
+				if sc.readline == nil {
+					sc.readRune()
+					goto start
+				} else if len(sc.indentstk) > 1 {
+					sc.dents = 1 - len(sc.indentstk)
+					sc.indentstk = sc.indentstk[:1]
+					goto start
+				}
 			}
-		}
+		*/
 
 		// At top-level (not in an expression).
 		sc.startToken(val)
 		sc.readRune()
 		val.raw = "\n"
-		return NEWLINE
+		return SEMI
 	}
 
 	// end of file
 	if c == 0 {
 		// Emit OUTDENTs for unfinished indentation,
 		// preceded by a NEWLINE if we haven't just emitted one.
-		if len(sc.indentstk) > 1 {
-			if savedLineStart {
-				sc.dents = 1 - len(sc.indentstk)
-				sc.indentstk = sc.indentstk[:1]
-				goto start
-			} else {
-				sc.lineStart = true
-				sc.startToken(val)
-				val.raw = "\n"
-				return NEWLINE
+		/*
+			if len(sc.indentstk) > 1 {
+				if savedLineStart {
+					sc.dents = 1 - len(sc.indentstk)
+					sc.indentstk = sc.indentstk[:1]
+					goto start
+				} else {
+					sc.lineStart = true
+					sc.startToken(val)
+					val.raw = "\n"
+					return NEWLINE
+				}
 			}
+		*/
+
+		if sc.insertSemi {
+			sc.startToken(val)
+			sc.endToken(val)
+			return SEMI
 		}
 
 		sc.startToken(val)
@@ -622,6 +652,7 @@ start:
 
 	// string literal
 	if c == '"' || c == '\'' {
+		insertSemi = true
 		return sc.scanString(val, c)
 	}
 
@@ -629,6 +660,7 @@ start:
 	if isIdentStart(c) {
 		// raw string literal
 		if c == 'r' && len(sc.rest) > 1 && (sc.rest[1] == '"' || sc.rest[1] == '\'') {
+			insertSemi = true
 			sc.readRune()
 			c = sc.peekRune()
 			return sc.scanString(val, c)
@@ -640,9 +672,15 @@ start:
 		}
 		sc.endToken(val)
 		if k, ok := keywordToken[val.raw]; ok {
+			switch k {
+			case BREAK, CONTINUE, PASS, RETURN:
+				insertSemi = true
+			}
+
 			return k
 		}
 
+		insertSemi = true
 		return IDENT
 	}
 
@@ -670,6 +708,8 @@ start:
 		}
 		sc.readRune()
 		sc.endToken(val)
+
+		insertSemi = true
 		switch c {
 		case ']':
 			return RBRACK
@@ -683,6 +723,7 @@ start:
 
 	// int or float literal, or period
 	if isdigit(c) || c == '.' {
+		insertSemi = true
 		return sc.scanNumber(val, c)
 	}
 
@@ -721,6 +762,11 @@ start:
 		}
 		switch c {
 		case '=':
+			if sc.peekRune() == '>' {
+				sc.readRune()
+				return ARROW
+			}
+
 			return EQ
 		case '<':
 			if sc.peekRune() == '<' {

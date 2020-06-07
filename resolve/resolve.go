@@ -788,11 +788,16 @@ func (r *resolver) expr(e syntax.Expr) {
 		if !AllowLambda {
 			r.errorf(e.Lambda, doesnt+"support lambda")
 		}
+
+		if e.Stmts == nil {
+			e.Stmts = []syntax.Stmt{&syntax.ReturnStmt{Result: e.Body}}
+		}
+
 		fn := &Function{
 			Name:   "lambda",
 			Pos:    e.Lambda,
 			Params: e.Params,
-			Body:   []syntax.Stmt{&syntax.ReturnStmt{Result: e.Body}},
+			Body:   e.Stmts,
 		}
 		e.Function = fn
 		r.function(fn, e.Lambda)
@@ -864,6 +869,9 @@ func (r *resolver) function(function *Function, pos syntax.Position) {
 				}
 				starStar = param.X.(*syntax.Ident)
 			}
+		default:
+			start, _ := param.Span()
+			r.errorf(start, "invalid param syntax: %T", param)
 		}
 	}
 

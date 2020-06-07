@@ -11,7 +11,9 @@ package syntax
 // package.  Verify that error positions are correct using the
 // chunkedfile mechanism.
 
-import "log"
+import (
+	"log"
+)
 
 // Enable this flag to print the token stream and log.Fatal on the first error.
 const debug = false
@@ -72,11 +74,12 @@ func ParseCompoundStmt(filename string, readline func() ([]byte, error)) (f *Fil
 	case NEWLINE:
 		// blank line
 	default:
-		stmts = p.parseSimpleStmt(stmts, false)
+		stmts = append(stmts, p.parseStmt2())
+		// stmts = p.parseSimpleStmt(stmts, false)
 		// Require but don't consume newline, to avoid blocking again.
-		if p.tok != NEWLINE {
-			p.in.errorf(p.in.pos, "invalid syntax")
-		}
+		// if p.tok != SEMI {
+		// p.in.errorf(p.in.pos, "invalid syntax")
+		// }
 	}
 
 	return &File{Path: filename, Stmts: stmts}, nil
@@ -100,7 +103,7 @@ func ParseExpr(filename string, src interface{}, mode Mode) (expr Expr, err erro
 
 	// A following newline (e.g. "f()\n") appears outside any brackets,
 	// on a non-blank line, and thus results in a NEWLINE token.
-	if p.tok == NEWLINE {
+	if p.tok == SEMI {
 		p.nextToken()
 	}
 
@@ -129,15 +132,22 @@ func (p *parser) nextToken() Position {
 	return oldpos
 }
 
+func (p *parser) expectSemi() {
+	if p.tok != RBRACE && p.tok != RPAREN {
+		switch p.tok {
+		case SEMI:
+			p.nextToken()
+		default:
+			p.in.errorf(p.in.pos, "got %#v, expected SEMI", p.tok)
+		}
+	}
+}
+
 // file_input = (NEWLINE | stmt)* EOF
 func (p *parser) parseFile() *File {
 	var stmts []Stmt
 	for p.tok != EOF {
-		if p.tok == NEWLINE {
-			p.nextToken()
-			continue
-		}
-		stmts = p.parseStmt(stmts)
+		stmts = append(stmts, p.parseStmt2())
 	}
 	return &File{Stmts: stmts}
 }
@@ -152,7 +162,56 @@ func (p *parser) parseStmt(stmts []Stmt) []Stmt {
 	} else if p.tok == WHILE {
 		return append(stmts, p.parseWhileStmt())
 	}
-	return p.parseSimpleStmt(stmts, true)
+	return p.parseSimpleStmt(stmts, false)
+}
+
+func (p *parser) parseStmt2() Stmt {
+	var stmt Stmt
+
+	switch p.tok {
+	case DEF:
+		stmt = p.parseDefStmt()
+	case IF:
+		stmt = p.parseIfStmt()
+	case FOR:
+		stmt = p.parseForStmt()
+	case WHILE:
+		stmt = p.parseWhileStmt()
+	case RETURN:
+		pos := p.nextToken() // consume RETURN
+		var result Expr
+		if p.tok != EOF && p.tok != NEWLINE && p.tok != SEMI {
+			result = p.parseExpr(false)
+		}
+		stmt = &ReturnStmt{Return: pos, Result: result}
+
+	case BREAK, CONTINUE, PASS:
+		tok := p.tok
+		pos := p.nextToken() // consume it
+		stmt = &BranchStmt{Token: tok, TokenPos: pos}
+
+	case LOAD:
+		stmt = p.parseLoadStmt()
+
+	default:
+		// Assignment
+		x := p.parseExpr(false)
+		switch p.tok {
+		case EQ, PLUS_EQ, MINUS_EQ, STAR_EQ, SLASH_EQ, SLASHSLASH_EQ, PERCENT_EQ, AMP_EQ, PIPE_EQ, CIRCUMFLEX_EQ, LTLT_EQ, GTGT_EQ:
+			op := p.tok
+			pos := p.nextToken() // consume op
+			rhs := p.parseExpr(false)
+			stmt = &AssignStmt{OpPos: pos, Op: op, LHS: x, RHS: rhs}
+
+		default:
+			// Expression statement (e.g. function call, doc string).
+			stmt = &ExprStmt{X: x}
+		}
+	}
+
+	p.expectSemi()
+
+	return stmt
 }
 
 func (p *parser) parseDefStmt() Stmt {
@@ -161,7 +220,6 @@ func (p *parser) parseDefStmt() Stmt {
 	p.consume(LPAREN)
 	params := p.parseParams()
 	p.consume(RPAREN)
-	p.consume(COLON)
 	body := p.parseSuite()
 	return &DefStmt{
 		Def:    defpos,
@@ -172,9 +230,9 @@ func (p *parser) parseDefStmt() Stmt {
 }
 
 func (p *parser) parseIfStmt() Stmt {
+	ec := exprContext{}
 	ifpos := p.nextToken() // consume IF
-	cond := p.parseTest()
-	p.consume(COLON)
+	cond := p.parseTest(ec)
 	body := p.parseSuite()
 	ifStmt := &IfStmt{
 		If:   ifpos,
@@ -184,8 +242,7 @@ func (p *parser) parseIfStmt() Stmt {
 	tail := ifStmt
 	for p.tok == ELIF {
 		elifpos := p.nextToken() // consume ELIF
-		cond := p.parseTest()
-		p.consume(COLON)
+		cond := p.parseTest(ec)
 		body := p.parseSuite()
 		elif := &IfStmt{
 			If:   elifpos,
@@ -198,7 +255,6 @@ func (p *parser) parseIfStmt() Stmt {
 	}
 	if p.tok == ELSE {
 		tail.ElsePos = p.nextToken() // consume ELSE
-		p.consume(COLON)
 		tail.False = p.parseSuite()
 	}
 	return ifStmt
@@ -209,7 +265,6 @@ func (p *parser) parseForStmt() Stmt {
 	vars := p.parseForLoopVariables()
 	p.consume(IN)
 	x := p.parseExpr(false)
-	p.consume(COLON)
 	body := p.parseSuite()
 	return &ForStmt{
 		For:  forpos,
@@ -220,9 +275,9 @@ func (p *parser) parseForStmt() Stmt {
 }
 
 func (p *parser) parseWhileStmt() Stmt {
+	ec := exprContext{}
 	whilepos := p.nextToken() // consume WHILE
-	cond := p.parseTest()
-	p.consume(COLON)
+	cond := p.parseTest(ec)
 	body := p.parseSuite()
 	return &WhileStmt{
 		While: whilepos,
@@ -235,9 +290,10 @@ func (p *parser) parseWhileStmt() Stmt {
 //
 // loop_variables = primary_with_suffix (COMMA primary_with_suffix)* COMMA?
 func (p *parser) parseForLoopVariables() Expr {
+	ec := exprContext{}
 	// Avoid parseExpr because it would consume the IN token
 	// following x in "for x in y: ...".
-	v := p.parsePrimaryWithSuffix()
+	v := p.parsePrimaryWithSuffix(ec)
 	if p.tok != COMMA {
 		return v
 	}
@@ -248,7 +304,7 @@ func (p *parser) parseForLoopVariables() Expr {
 		if terminatesExprList(p.tok) {
 			break
 		}
-		list = append(list, p.parsePrimaryWithSuffix())
+		list = append(list, p.parsePrimaryWithSuffix(ec))
 	}
 	return &TupleExpr{List: list}
 }
@@ -258,11 +314,12 @@ func (p *parser) parseForLoopVariables() Expr {
 func (p *parser) parseSimpleStmt(stmts []Stmt, consumeNL bool) []Stmt {
 	for {
 		stmts = append(stmts, p.parseSmallStmt())
+		p.expectSemi()
 		if p.tok != SEMI {
 			break
 		}
 		p.nextToken() // consume SEMI
-		if p.tok == NEWLINE || p.tok == EOF {
+		if p.tok == RBRACE || p.tok == NEWLINE || p.tok == EOF {
 			break
 		}
 	}
@@ -314,13 +371,14 @@ func (p *parser) parseSmallStmt() Stmt {
 
 // stmt = LOAD '(' STRING {',' (IDENT '=')? STRING} [','] ')'
 func (p *parser) parseLoadStmt() *LoadStmt {
+	ec := exprContext{}
 	loadPos := p.nextToken() // consume LOAD
 	lparen := p.consume(LPAREN)
 
 	if p.tok != STRING {
 		p.in.errorf(p.in.pos, "first operand of load statement must be a string literal")
 	}
-	module := p.parsePrimary().(*Literal)
+	module := p.parsePrimary(ec).(*Literal)
 
 	var from, to []*Ident
 	for p.tok != RPAREN && p.tok != EOF {
@@ -332,7 +390,7 @@ func (p *parser) parseLoadStmt() *LoadStmt {
 		case STRING:
 			// load("module", "id")
 			// To name is same as original.
-			lit := p.parsePrimary().(*Literal)
+			lit := p.parsePrimary(ec).(*Literal)
 			id := &Ident{
 				NamePos: lit.TokenPos.add(`"`),
 				Name:    lit.Value.(string),
@@ -351,7 +409,7 @@ func (p *parser) parseLoadStmt() *LoadStmt {
 			if p.tok != STRING {
 				p.in.errorf(p.in.pos, `original name of loaded symbol must be quoted: %s="originalname"`, id.Name)
 			}
-			lit := p.parsePrimary().(*Literal)
+			lit := p.parsePrimary(ec).(*Literal)
 			from = append(from, &Ident{
 				NamePos: lit.TokenPos.add(`"`),
 				Name:    lit.Value.(string),
@@ -380,19 +438,27 @@ func (p *parser) parseLoadStmt() *LoadStmt {
 
 // suite is typically what follows a COLON (e.g. after DEF or FOR).
 // suite = simple_stmt | NEWLINE INDENT stmt+ OUTDENT
-func (p *parser) parseSuite() []Stmt {
-	if p.tok == NEWLINE {
-		p.nextToken() // consume NEWLINE
-		p.consume(INDENT)
-		var stmts []Stmt
-		for p.tok != OUTDENT && p.tok != EOF {
-			stmts = p.parseStmt(stmts)
+func (p *parser) parseSuiteOld() []Stmt {
+	p.consume(LBRACE)
+	var stmts []Stmt
+	for p.tok != RBRACE && p.tok != EOF {
+		stmts = p.parseStmt(stmts)
+		if p.tok == SEMI {
+			p.consume(SEMI)
 		}
-		p.consume(OUTDENT)
-		return stmts
 	}
+	p.consume(RBRACE)
+	return stmts
+}
 
-	return p.parseSimpleStmt(nil, true)
+func (p *parser) parseSuite() []Stmt {
+	p.consume(LBRACE)
+	var stmts []Stmt
+	for p.tok != RBRACE && p.tok != EOF {
+		stmts = append(stmts, p.parseStmt2())
+	}
+	p.consume(RBRACE)
+	return stmts
 }
 
 func (p *parser) parseIdent() *Ident {
@@ -431,6 +497,7 @@ func (p *parser) consume(t Token) Position {
 //      *Unary{Op: STAR, X: *Ident}                     *args
 //      *Unary{Op: STARSTAR, X: *Ident}                 **kwargs
 func (p *parser) parseParams() []Expr {
+	ec := exprContext{}
 	var params []Expr
 	for p.tok != RPAREN && p.tok != COLON && p.tok != EOF {
 		if len(params) > 0 {
@@ -461,7 +528,7 @@ func (p *parser) parseParams() []Expr {
 		id := p.parseIdent()
 		if p.tok == EQ { // default value
 			eq := p.nextToken()
-			dflt := p.parseTest()
+			dflt := p.parseTest(ec)
 			params = append(params, &BinaryExpr{
 				X:     id,
 				OpPos: eq,
@@ -482,50 +549,56 @@ func (p *parser) parseParams() []Expr {
 // In many cases we must use parseTest to avoid ambiguity such as
 // f(x, y) vs. f((x, y)).
 func (p *parser) parseExpr(inParens bool) Expr {
-	x := p.parseTest()
+	ec := exprContext{}
+	x := p.parseTest(ec)
 	if p.tok != COMMA {
 		return x
 	}
 
 	// tuple
-	exprs := p.parseExprs([]Expr{x}, inParens)
+	exprs := p.parseExprs([]Expr{x}, exprContext{allowTrailingComma: inParens})
 	return &TupleExpr{List: exprs}
+}
+
+type exprContext struct {
+	allowTrailingComma bool
+	allowParams        bool
 }
 
 // parseExprs parses a comma-separated list of expressions, starting with the comma.
 // It is used to parse tuples and list elements.
 // expr_list = (',' expr)* ','?
-func (p *parser) parseExprs(exprs []Expr, allowTrailingComma bool) []Expr {
+func (p *parser) parseExprs(exprs []Expr, ec exprContext) []Expr {
 	for p.tok == COMMA {
 		pos := p.nextToken()
 		if terminatesExprList(p.tok) {
-			if !allowTrailingComma {
+			if !ec.allowTrailingComma {
 				p.in.error(pos, "unparenthesized tuple with trailing comma")
 			}
 			break
 		}
-		exprs = append(exprs, p.parseTest())
+		exprs = append(exprs, p.parseTest(ec))
 	}
 	return exprs
 }
 
 // parseTest parses a 'test', a single-component expression.
-func (p *parser) parseTest() Expr {
+func (p *parser) parseTest(ec exprContext) Expr {
 	if p.tok == LAMBDA {
-		return p.parseLambda(true)
+		return p.parseLambda(ec, true)
 	}
 
-	x := p.parseTestPrec(0)
+	x := p.parseTestPrec(ec, 0)
 
 	// conditional expression (t IF cond ELSE f)
 	if p.tok == IF {
 		ifpos := p.nextToken()
-		cond := p.parseTestPrec(0)
+		cond := p.parseTestPrec(ec, 0)
 		if p.tok != ELSE {
 			p.in.error(ifpos, "conditional expression without else clause")
 		}
 		elsepos := p.nextToken()
-		else_ := p.parseTest()
+		else_ := p.parseTest(ec)
 		return &CondExpr{If: ifpos, Cond: cond, True: x, ElsePos: elsepos, False: else_}
 	}
 
@@ -534,16 +607,16 @@ func (p *parser) parseTest() Expr {
 
 // parseTestNoCond parses a a single-component expression without
 // consuming a trailing 'if expr else expr'.
-func (p *parser) parseTestNoCond() Expr {
+func (p *parser) parseTestNoCond(ec exprContext) Expr {
 	if p.tok == LAMBDA {
-		return p.parseLambda(false)
+		return p.parseLambda(ec, false)
 	}
-	return p.parseTestPrec(0)
+	return p.parseTestPrec(ec, 0)
 }
 
 // parseLambda parses a lambda expression.
 // The allowCond flag allows the body to be an 'a if b else c' conditional.
-func (p *parser) parseLambda(allowCond bool) Expr {
+func (p *parser) parseLambda(ec exprContext, allowCond bool) Expr {
 	lambda := p.nextToken()
 	var params []Expr
 	if p.tok != COLON {
@@ -553,9 +626,9 @@ func (p *parser) parseLambda(allowCond bool) Expr {
 
 	var body Expr
 	if allowCond {
-		body = p.parseTest()
+		body = p.parseTest(ec)
 	} else {
-		body = p.parseTestNoCond()
+		body = p.parseTestNoCond(ec)
 	}
 
 	return &LambdaExpr{
@@ -565,15 +638,21 @@ func (p *parser) parseLambda(allowCond bool) Expr {
 	}
 }
 
-func (p *parser) parseTestPrec(prec int) Expr {
+func (p *parser) skipWS() {
+	for p.tok == NEWLINE || p.tok == INDENT || p.tok == OUTDENT {
+		p.nextToken()
+	}
+}
+
+func (p *parser) parseTestPrec(ec exprContext, prec int) Expr {
 	if prec >= len(preclevels) {
-		return p.parsePrimaryWithSuffix()
+		return p.parsePrimaryWithSuffix(ec)
 	}
 
 	// expr = NOT expr
 	if p.tok == NOT && prec == int(precedence[NOT]) {
 		pos := p.nextToken()
-		x := p.parseTestPrec(prec)
+		x := p.parseTestPrec(ec, prec)
 		return &UnaryExpr{
 			OpPos: pos,
 			Op:    NOT,
@@ -581,13 +660,13 @@ func (p *parser) parseTestPrec(prec int) Expr {
 		}
 	}
 
-	return p.parseBinopExpr(prec)
+	return p.parseBinopExpr(ec, prec)
 }
 
 // expr = test (OP test)*
 // Uses precedence climbing; see http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm#climbing.
-func (p *parser) parseBinopExpr(prec int) Expr {
-	x := p.parseTestPrec(prec + 1)
+func (p *parser) parseBinopExpr(ec exprContext, prec int) Expr {
+	x := p.parseTestPrec(ec, prec+1)
 	for first := true; ; first = false {
 		if p.tok == NOT {
 			p.nextToken() // consume NOT
@@ -613,7 +692,7 @@ func (p *parser) parseBinopExpr(prec int) Expr {
 
 		op := p.tok
 		pos := p.nextToken()
-		y := p.parseTestPrec(opprec + 1)
+		y := p.parseTestPrec(ec, opprec+1)
 		x = &BinaryExpr{OpPos: pos, Op: op, X: x, Y: y}
 	}
 }
@@ -654,8 +733,8 @@ func init() {
 //                     | primary '.' IDENT
 //                     | primary slice_suffix
 //                     | primary call_suffix
-func (p *parser) parsePrimaryWithSuffix() Expr {
-	x := p.parsePrimary()
+func (p *parser) parsePrimaryWithSuffix(ec exprContext) Expr {
+	x := p.parsePrimary(ec)
 	for {
 		switch p.tok {
 		case DOT:
@@ -663,9 +742,9 @@ func (p *parser) parsePrimaryWithSuffix() Expr {
 			id := p.parseIdent()
 			x = &DotExpr{Dot: dot, X: x, Name: id}
 		case LBRACK:
-			x = p.parseSliceSuffix(x)
+			x = p.parseSliceSuffix(ec, x)
 		case LPAREN:
-			x = p.parseCallSuffix(x)
+			x = p.parseCallSuffix(ec, x)
 		default:
 			return x
 		}
@@ -673,7 +752,7 @@ func (p *parser) parsePrimaryWithSuffix() Expr {
 }
 
 // slice_suffix = '[' expr? ':' expr?  ':' expr? ']'
-func (p *parser) parseSliceSuffix(x Expr) Expr {
+func (p *parser) parseSliceSuffix(ec exprContext, x Expr) Expr {
 	lbrack := p.nextToken()
 	var lo, hi, step Expr
 	if p.tok != COLON {
@@ -692,13 +771,13 @@ func (p *parser) parseSliceSuffix(x Expr) Expr {
 	if p.tok == COLON {
 		p.nextToken()
 		if p.tok != COLON && p.tok != RBRACK {
-			hi = p.parseTest()
+			hi = p.parseTest(ec)
 		}
 	}
 	if p.tok == COLON {
 		p.nextToken()
 		if p.tok != RBRACK {
-			step = p.parseTest()
+			step = p.parseTest(ec)
 		}
 	}
 	rbrack := p.consume(RBRACK)
@@ -706,14 +785,15 @@ func (p *parser) parseSliceSuffix(x Expr) Expr {
 }
 
 // call_suffix = '(' arg_list? ')'
-func (p *parser) parseCallSuffix(fn Expr) Expr {
+func (p *parser) parseCallSuffix(ec exprContext, fn Expr) Expr {
 	lparen := p.consume(LPAREN)
 	var rparen Position
 	var args []Expr
+
 	if p.tok == RPAREN {
 		rparen = p.nextToken()
 	} else {
-		args = p.parseArgs()
+		args = p.parseArgs(ec)
 		rparen = p.consume(RPAREN)
 	}
 	return &CallExpr{Fn: fn, Lparen: lparen, Args: args, Rparen: rparen}
@@ -722,7 +802,7 @@ func (p *parser) parseCallSuffix(fn Expr) Expr {
 // parseArgs parses a list of actual parameter values (arguments).
 // It mirrors the structure of parseParams.
 // arg_list = ((arg COMMA)* arg COMMA?)?
-func (p *parser) parseArgs() []Expr {
+func (p *parser) parseArgs(ec exprContext) []Expr {
 	var args []Expr
 	for p.tok != RPAREN && p.tok != EOF {
 		if len(args) > 0 {
@@ -736,7 +816,7 @@ func (p *parser) parseArgs() []Expr {
 		if p.tok == STAR || p.tok == STARSTAR {
 			op := p.tok
 			pos := p.nextToken()
-			x := p.parseTest()
+			x := p.parseTest(ec)
 			args = append(args, &UnaryExpr{
 				OpPos: pos,
 				Op:    op,
@@ -748,7 +828,7 @@ func (p *parser) parseArgs() []Expr {
 		// We use a different strategy from Bazel here to stay within LL(1).
 		// Instead of looking ahead two tokens (IDENT, EQ) we parse
 		// 'test = test' then check that the first was an IDENT.
-		x := p.parseTest()
+		x := p.parseTest(ec)
 
 		if p.tok == EQ {
 			// name = value
@@ -756,13 +836,17 @@ func (p *parser) parseArgs() []Expr {
 				p.in.errorf(p.in.pos, "keyword argument must have form name=expr")
 			}
 			eq := p.nextToken()
-			y := p.parseTest()
+			y := p.parseTest(ec)
 			x = &BinaryExpr{
 				X:     x,
 				OpPos: eq,
 				Op:    EQ,
 				Y:     y,
 			}
+		}
+
+		if p.tok == SEMI {
+			p.nextToken()
 		}
 
 		args = append(args, x)
@@ -777,11 +861,19 @@ func (p *parser) parseArgs() []Expr {
 //          | '{' ...                    // dict literal or comprehension
 //          | '(' ...                    // tuple or parenthesized expression
 //          | ('-'|'+'|'~') primary_with_suffix
-func (p *parser) parsePrimary() Expr {
+func (p *parser) parsePrimary(ec exprContext) Expr {
+	p.skipWS()
+
 	switch p.tok {
 	case IDENT:
-		return p.parseIdent()
+		id := p.parseIdent()
 
+		if p.tok == ARROW {
+			pos := p.nextToken()
+			return p.parseArrow(pos, []Expr{id})
+		}
+
+		return id
 	case INT, FLOAT, STRING:
 		var val interface{}
 		tok := p.tok
@@ -805,27 +897,86 @@ func (p *parser) parsePrimary() Expr {
 		return p.parseList()
 
 	case LBRACE:
-		return p.parseDict()
+		return p.parseDict(ec)
+
+	case STARSTAR:
+		if !ec.allowParams {
+			p.in.errorf(p.in.pos, "got %#v, want primary expression", p.tok)
+		}
+
+		op := p.tok
+		pos := p.nextToken()
+		x := p.parseIdent()
+
+		return &UnaryExpr{
+			OpPos: pos,
+			Op:    op,
+			X:     x,
+		}
+	case STAR:
+		if !ec.allowParams {
+			p.in.errorf(p.in.pos, "got %#v, want primary expression", p.tok)
+		}
+
+		op := p.tok
+		pos := p.nextToken()
+		x := p.parseIdent()
+
+		return &UnaryExpr{
+			OpPos: pos,
+			Op:    op,
+			X:     x,
+		}
 
 	case LPAREN:
 		lparen := p.nextToken()
 		if p.tok == RPAREN {
 			// empty tuple
 			rparen := p.nextToken()
+
+			if p.tok == ARROW {
+				pos := p.nextToken()
+				return p.parseArrow(pos, nil)
+			}
 			return &TupleExpr{Lparen: lparen, Rparen: rparen}
 		}
-		e := p.parseExpr(true) // allow trailing comma
-		rparen := p.consume(RPAREN)
-		return &ParenExpr{
-			Lparen: lparen,
-			X:      e,
-			Rparen: rparen,
+		// e := p.parseExpr(true) // allow trailing comma
+		ec := exprContext{
+			allowParams:        true,
+			allowTrailingComma: true,
 		}
+
+		e := p.parseTest(ec)
+		exprs := []Expr{e}
+
+		if p.tok == COMMA {
+			// tuple
+			exprs = p.parseExprs(exprs, ec)
+			e = &TupleExpr{List: exprs}
+		}
+
+		rparen := p.consume(RPAREN)
+
+		if p.tok == ARROW {
+			pos := p.nextToken()
+
+			return p.parseArrow(pos, exprs)
+		} else {
+			return &ParenExpr{
+				Lparen: lparen,
+				X:      e,
+				Rparen: rparen,
+			}
+		}
+
+	case ARROW:
+		pos := p.nextToken()
+		return p.parseArrow(pos, nil)
 
 	case MINUS, PLUS, TILDE: // unary
 		tok := p.tok
 		pos := p.nextToken()
-		x := p.parsePrimaryWithSuffix()
+		x := p.parsePrimaryWithSuffix(ec)
 		return &UnaryExpr{
 			OpPos: pos,
 			Op:    tok,
@@ -836,11 +987,64 @@ func (p *parser) parsePrimary() Expr {
 	panic("unreachable")
 }
 
+func (p *parser) parseArrowSuite() []Stmt {
+	if p.tok == LBRACE {
+		p.nextToken() // consume LBRACE
+		// p.consume(INDENT)
+		var stmts []Stmt
+		for p.tok != RBRACE && p.tok != EOF {
+			stmts = append(stmts, p.parseStmt2())
+		}
+		p.consume(RBRACE)
+		return stmts
+	}
+
+	body := p.parseTest(exprContext{})
+	return []Stmt{&ExprStmt{X: body}}
+}
+
+func (p *parser) parseArrowStmt(stmts []Stmt) []Stmt {
+	if p.tok == DEF {
+		return append(stmts, p.parseDefStmt())
+	} else if p.tok == IF {
+		return append(stmts, p.parseIfStmt())
+	} else if p.tok == FOR {
+		return append(stmts, p.parseForStmt())
+	} else if p.tok == WHILE {
+		return append(stmts, p.parseWhileStmt())
+	}
+
+	return p.parseSimpleStmt(stmts, false)
+}
+
+func (p *parser) parseArrow(pos Position, exprArgs []Expr) Expr {
+	body := p.parseArrowSuite()
+
+	// Add a return to the end. If the final statement is also
+	// an expression, then return it's value. Otherwise return None.
+
+	last := len(body) - 1
+
+	start, _ := body[last].Span()
+	if expr, ok := body[last].(*ExprStmt); ok {
+		body[last] = &ReturnStmt{Return: start, Result: expr.X}
+	} else {
+		body = append(body, &ReturnStmt{Return: start})
+	}
+
+	return &LambdaExpr{
+		Lambda: pos,
+		Params: exprArgs,
+		Stmts:  body,
+	}
+}
+
 // list = '[' ']'
 //      | '[' expr ']'
 //      | '[' expr expr_list ']'
 //      | '[' expr (FOR loop_variables IN expr)+ ']'
 func (p *parser) parseList() Expr {
+	ec := exprContext{}
 	lbrack := p.nextToken()
 	if p.tok == RBRACK {
 		// empty List
@@ -848,7 +1052,7 @@ func (p *parser) parseList() Expr {
 		return &ListExpr{Lbrack: lbrack, Rbrack: rbrack}
 	}
 
-	x := p.parseTest()
+	x := p.parseTest(ec)
 
 	if p.tok == FOR {
 		// list comprehension
@@ -858,7 +1062,10 @@ func (p *parser) parseList() Expr {
 	exprs := []Expr{x}
 	if p.tok == COMMA {
 		// multi-item list literal
-		exprs = p.parseExprs(exprs, true) // allow trailing comma
+		ec := exprContext{
+			allowTrailingComma: true,
+		}
+		exprs = p.parseExprs(exprs, ec) // allow trailing comma
 	}
 
 	rbrack := p.consume(RBRACK)
@@ -868,7 +1075,7 @@ func (p *parser) parseList() Expr {
 // dict = '{' '}'
 //      | '{' dict_entry_list '}'
 //      | '{' dict_entry FOR loop_variables IN expr '}'
-func (p *parser) parseDict() Expr {
+func (p *parser) parseDict(ec exprContext) Expr {
 	lbrace := p.nextToken()
 	if p.tok == RBRACE {
 		// empty dict
@@ -876,7 +1083,7 @@ func (p *parser) parseDict() Expr {
 		return &DictExpr{Lbrace: lbrace, Rbrace: rbrace}
 	}
 
-	x := p.parseDictEntry()
+	x := p.parseDictEntry(ec)
 
 	if p.tok == FOR {
 		// dict comprehension
@@ -889,7 +1096,7 @@ func (p *parser) parseDict() Expr {
 		if p.tok == RBRACE {
 			break
 		}
-		entries = append(entries, p.parseDictEntry())
+		entries = append(entries, p.parseDictEntry(ec))
 	}
 
 	rbrace := p.consume(RBRACE)
@@ -897,10 +1104,10 @@ func (p *parser) parseDict() Expr {
 }
 
 // dict_entry = test ':' test
-func (p *parser) parseDictEntry() *DictEntry {
-	k := p.parseTest()
+func (p *parser) parseDictEntry(ec exprContext) *DictEntry {
+	k := p.parseTest(ec)
 	colon := p.consume(COLON)
-	v := p.parseTest()
+	v := p.parseTest(ec)
 	return &DictEntry{Key: k, Colon: colon, Value: v}
 }
 
@@ -910,6 +1117,7 @@ func (p *parser) parseDictEntry() *DictEntry {
 //
 // There can be multiple FOR/IF clauses; the first is always a FOR.
 func (p *parser) parseComprehensionSuffix(lbrace Position, body Expr, endBrace Token) Expr {
+	ec := exprContext{}
 	var clauses []Node
 	for p.tok != endBrace {
 		if p.tok == FOR {
@@ -922,11 +1130,11 @@ func (p *parser) parseComprehensionSuffix(lbrace Position, body Expr, endBrace T
 			//  ('if' is used by the comprehension);
 			// - a lambda expression
 			// - an unparenthesized tuple.
-			x := p.parseTestPrec(0)
+			x := p.parseTestPrec(ec, 0)
 			clauses = append(clauses, &ForClause{For: pos, Vars: vars, In: in, X: x})
 		} else if p.tok == IF {
 			pos := p.nextToken()
-			cond := p.parseTestNoCond()
+			cond := p.parseTestNoCond(ec)
 			clauses = append(clauses, &IfClause{If: pos, Cond: cond})
 		} else {
 			p.in.errorf(p.in.pos, "got %#v, want '%s', for, or if", p.tok, endBrace)

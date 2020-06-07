@@ -10,15 +10,15 @@ assert.eq(a, 1)
 assert.eq(b, 2)
 assert.eq(c, 3)
 
-def f1(): (x,) = 1
+def f1() { (x,) = 1 }
 assert.fails(f1, "int in sequence assignment")
-def f2(): a, b, c = 1, 2
+def f2() { a, b, c = 1, 2 }
 assert.fails(f2, "too few values to unpack")
-def f3(): a, b = 1, 2, 3
+def f3() { a, b = 1, 2, 3 }
 assert.fails(f3, "too many values to unpack")
-def f4(): a, b = (1,)
+def f4() { a, b = (1,) }
 assert.fails(f4, "too few values to unpack")
-def f5(): (a,) = [1, 2, 3]
+def f5() { (a,) = [1, 2, 3] }
 assert.fails(f5, "too many values to unpack")
 
 ---
@@ -30,13 +30,13 @@ assert.eq(a, 1)
 assert.eq(b, 2)
 assert.eq(c, 3)
 
-def f1(): [a, b, c,] = 1
+def f1() { [a, b, c,] = 1 }
 assert.fails(f1, "got int in sequence assignment")
-def f2(): [a, b, c] = 1, 2
+def f2() { [a, b, c] = 1, 2 }
 assert.fails(f2, "too few values to unpack")
-def f3(): [a, b] = 1, 2, 3
+def f3() { [a, b] = 1, 2, 3 }
 assert.fails(f3, "too many values to unpack")
-def f4(): [a, b] = (1,)
+def f4() { [a, b] = (1,) }
 assert.fails(f4, "too few values to unpack")
 
 ---
@@ -70,7 +70,7 @@ assert.eq(n, 4)
 # misc assignment
 load("assert.star", "assert")
 
-def assignment():
+def assignment() {
   a = [1, 2, 3]
   a[1] = 5
   assert.eq(a, [1, 5, 3])
@@ -81,9 +81,9 @@ def assignment():
   x[1] = 2
   x[1] += 3
   assert.eq(x[1], 5)
-  def f12(): x[(1, "abc", {})] = 1
+  def f12() { x[(1, "abc", {})] = 1 }
   assert.fails(f12, "unhashable type: dict")
-
+}
 assignment()
 
 ---
@@ -91,12 +91,13 @@ assignment()
 
 load("assert.star", "assert")
 
-def f():
+def f() {
   x = 1
   x += 1
   assert.eq(x, 2)
   x *= 3
   assert.eq(x, 6)
+}
 f()
 
 ---
@@ -106,9 +107,10 @@ load("assert.star", "assert")
 
 count = [0] # count[0] is the number of calls to f
 
-def f():
+def f() {
   count[0] += 1
   return count[0]
+}
 
 x = [1, 2, 3]
 x[f()] += 1
@@ -123,9 +125,10 @@ load("assert.star", "assert")
 
 calls = []
 
-def f(name, result):
+def f(name, result) {
   calls.append(name)
   return result
+}
 
 # The right side is evaluated before the left in an ordinary assignment.
 calls.clear()
@@ -144,9 +147,9 @@ assert.eq(calls, ["array", "index", "addend"])
 ---
 # global referenced before assignment
 
-def f():
+def f() {
    return g ### "global variable g referenced before assignment"
-
+}
 f()
 
 g = 1
@@ -156,12 +159,13 @@ g = 1
 # Free variables are captured by reference, so this is ok.
 load("assert.star", "assert")
 
-def f():
-   def g():
+def f() {
+   def g() {
      return outer
+    }
    outer = 1
    return g()
-
+}
 assert.eq(f(), 1)
 
 ---
@@ -173,11 +177,11 @@ printok = [False]
 # However, the Java implementation currently reports the dynamic
 # error at the x=1 statement (b/33975425).  I think we need to simplify
 # the resolver algorithm to what we have implemented.
-def use_before_def():
+def use_before_def() {
   print(x) # dynamic error: local var referenced before assignment
   printok[0] = True
   x = 1  # makes 'x' local
-
+}
 assert.fails(use_before_def, 'local variable x referenced before assignment')
 assert.true(not printok[0]) # execution of print statement failed
 
@@ -185,9 +189,9 @@ assert.true(not printok[0]) # execution of print statement failed
 x = [1]
 x.extend([2]) # ok
 
-def f():
+def f() {
    x += [4] ### "local variable x referenced before assignment"
-
+}
 f()
 
 ---
@@ -204,7 +208,7 @@ assert.eq(type(list), "list")
 # ...but then all uses refer to the global,
 # even if they occur before the binding use.
 # See github.com/google/skylark/issues/116.
-assert.fails(lambda: tuple, "global variable tuple referenced before assignment")
+assert.fails(=> tuple, "global variable tuple referenced before assignment")
 tuple = ()
 
 ---
@@ -263,29 +267,35 @@ hf.x = [1, 2]
 hf.x += [3, 4]
 assert.eq(hf.x, [1, 2, 3, 4])
 freeze(hf)
-def setX(hf):
+def setX(hf) {
   hf.x = 2
-def setY(hf):
+}
+def setY(hf) {
   hf.y = 3
-assert.fails(lambda: setX(hf), "cannot set field on a frozen hasfields")
-assert.fails(lambda: setY(hf), "cannot set field on a frozen hasfields")
+}
+assert.fails(=> setX(hf), "cannot set field on a frozen hasfields")
+assert.fails(=> setY(hf), "cannot set field on a frozen hasfields")
 
 ---
 # destucturing assignment in a for loop.
 load("assert.star", "assert")
 
-def f():
+def f() {
   res = []
-  for (x, y), z in [(["a", "b"], 3), (["c", "d"], 4)]:
+  for (x, y), z in [(["a", "b"], 3), (["c", "d"], 4)] {
     res.append((x, y, z))
+  }
   return res
+}
 assert.eq(f(), [("a", "b", 3), ("c", "d", 4)])
 
-def g():
+def g() {
   a = {}
-  for i, a[i] in [("one", 1), ("two", 2)]:
+  for i, a[i] in [("one", 1), ("two", 2)] {
     pass
+  }
   return a
+}
 assert.eq(g(), {"one": 1, "two": 2})
 
 ---
@@ -324,12 +334,12 @@ _ = assert ### "local variable assert referenced before assignment"
 load("assert.star", "assert")
 
 ---
-def f(): assert.eq(1, 1) # forward ref OK
+def f() { assert.eq(1, 1) } # forward ref OK
 load("assert.star", "assert")
 f()
 
 ---
 # option:loadbindsglobally
-def f(): assert.eq(1, 1) # forward ref OK
+def f() { assert.eq(1, 1) } # forward ref OK
 load("assert.star", "assert")
 f()

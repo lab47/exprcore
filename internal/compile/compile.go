@@ -1807,6 +1807,8 @@ func (fcomp *fcomp) function(f *resolve.Function) {
 				fcomp.emit(MANDATORY)
 				ndefaults++
 			}
+		default:
+			log.Panicf("%s: unexpected param type %T", f.Pos, param)
 		}
 	}
 

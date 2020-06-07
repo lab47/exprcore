@@ -407,12 +407,17 @@ type LambdaExpr struct {
 	Lambda Position
 	Params []Expr // param = ident | ident=expr | * | *ident | **ident
 	Body   Expr
+	Stmts  []Stmt
 
 	Function interface{} // a *resolve.Function, set by resolver
 }
 
 func (x *LambdaExpr) Span() (start, end Position) {
-	_, end = x.Body.Span()
+	if x.Body != nil {
+		_, end = x.Body.Span()
+	} else if x.Stmts != nil {
+		_, end = x.Stmts[len(x.Stmts)-1].Span()
+	}
 	return x.Lambda, end
 }
 

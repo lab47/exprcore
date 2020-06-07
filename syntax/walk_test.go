@@ -13,11 +13,13 @@ import (
 
 func TestWalk(t *testing.T) {
 	const src = `
-for x in y:
-  if x:
+for x in y {
+  if x {
     pass
-  else:
+	} else {
     f([2*x for x in "abc"])
+	}
+}
 `
 	// TODO(adonovan): test that it finds all syntax.Nodes
 	// (compare against a reflect-based implementation).
@@ -74,13 +76,15 @@ func ExampleWalk() {
 	const src = `
 load("library", "a")
 
-def b(c, *, d=e):
+def b(c, *, d=e) {
     f += {g: h}
     i = -(j)
     return k.l[m + n]
+}
 
-for o in [p for q, r in s if t]:
+for o in [p for q, r in s if t] {
     u(lambda: v, w[x:y:z])
+}
 `
 	f, err := syntax.Parse("hello.star", src, 0)
 	if err != nil {

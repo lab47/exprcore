@@ -41,16 +41,16 @@ assert.eq(1 if "" else 0, 0)
 # 'or' yields the first true operand, or the last if all are false.
 assert.eq(0 or "" or [] or 0, 0)
 assert.eq(0 or "" or [] or 123 or 1 // 0, 123)
-assert.fails(lambda : 0 or "" or [] or 0 or 1 // 0, "division by zero")
+assert.fails(=> 0 or "" or [] or 0 or 1 // 0, "division by zero" )
 
 # 'and' yields the first false operand, or the last if all are true.
 assert.eq(1 and "a" and [1] and 123, 123)
 assert.eq(1 and "a" and [1] and 0 and 1 // 0, 0)
-assert.fails(lambda : 1 and "a" and [1] and 123 and 1 // 0, "division by zero")
+assert.fails(=> 1 and "a" and [1] and 123 and 1 // 0, "division by zero")
 
 # Built-ins that want a bool want an actual bool, not a truth value.
 # See github.com/bazelbuild/starlark/issues/30
 assert.eq(''.splitlines(True), [])
-assert.fails(lambda: ''.splitlines(1), 'got int, want bool')
-assert.fails(lambda: ''.splitlines("hello"), 'got string, want bool')
-assert.fails(lambda: ''.splitlines(0.0), 'got float, want bool')
+assert.fails(=> ''.splitlines(1), 'got int, want bool' )
+assert.fails(=> ''.splitlines("hello"), 'got string, want bool' )
+assert.fails(=> ''.splitlines(0.0), 'got float, want bool' )

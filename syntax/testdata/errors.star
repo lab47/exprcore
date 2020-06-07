@@ -1,46 +1,45 @@
 # Tests of parse errors.
-# This is a "chunked" file; each "---" line demarcates a new parser input.
+# This is a "chunked" file, each "---" line demarcates a new parser input.
 #
 # TODO(adonovan): lots more tests.
-
-x = 1 +
-2 ### "got newline, want primary expression"
-
----
 
 _ = *x ### `got '\*', want primary`
 
 ---
 # trailing comma is ok
 
-def f(a, ): pass
-def f(*args, ): pass
-def f(**kwargs, ): pass
+def f(a, ) { pass }
+def f(*args, ) { pass }
+def f(**kwargs, ) { pass }
 
 ---
 
 # Parameters are validated later.
-def f(**kwargs, *args, *, b=1, a, **kwargs, *args, *, b=1, a):
+def f(**kwargs, *args, *, b=1, a, **kwargs, *args, *, b=1, a) {
   pass
+}
 
 ---
 
-def f(a, *-b, c): # ### `got '-', want ','`
+def f(a, *-b, c) { # ### `got '-', want ','`
   pass
+}
 
 ---
 
-def f(**kwargs, *args, b=1, a, **kwargs, *args, b=1, a):
+def f(**kwargs, *args, b=1, a, **kwargs, *args, b=1, a) {
   pass
+}
 
 ---
 
-def pass(): ### "not an identifier"
+def pass() { ### "not an identifier"
   pass
+}
 
 ---
 
-def f : ### `got ':', want '\('`
+def f {} ### `got '{', want '\('`
 
 ---
 # trailing comma is ok
@@ -60,21 +59,23 @@ _ = {x for y in z}   ### `got for, want ':'`
 
 ---
 
-def f():
+def f() {
   pass
- pass ### `unindent does not match any outer indentation level`
+}
+ pass 
 
 ---
-def f(): pass
+def f() { pass }
 ---
 # Blank line after pass => outdent.
-def f():
+def f() {
 	pass
+	}
 
 ---
 # No blank line after pass; EOF acts like a newline.
-def f():
-	pass
+def f() {
+	pass }
 ---
 # This is a well known parsing ambiguity in Python.
 # Python 2.7 accepts it but Python3 and Starlark reject it.
@@ -86,8 +87,9 @@ _ = [x for x in (lambda: True, lambda: False) if x()] # ok in all dialects
 # Starlark, following Python 3, allows an unparenthesized
 # tuple after 'in' only in a for statement but not in a comprehension.
 # (Python 2.7 allows both.)
-for x in 1, 2, 3:
+for x in 1, 2, 3 {
       print(x)
+}
 
 _ = [x for x in 1, 2, 3] ### `got ',', want ']', for, or if`
 ---
@@ -175,13 +177,14 @@ def f(load): ### `not an identifier`
 load("module", "x",)
 ---
 x = 1 +
-2 ### "got newline, want primary expression"
+2 # ok
 ---
-def f():
+def f() {
     pass
+}
 # this used to cause a spurious indentation error
 ---
-print 1 2 ### `got int literal, want newline`
+print 1 2 ### `got int literal, expected SEMI`
 
 ---
 # newlines are not allowed in raw string literals

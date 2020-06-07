@@ -9,33 +9,45 @@
 #
 # Clients may use these functions to define their own testing abstractions.
 
-def _eq(x, y):
-    if x != y:
+def _eq(x, y) {
+    if x != y {
         error("%r != %r" % (x, y))
+    }
+}
 
-def _ne(x, y):
-    if x == y:
+def _ne(x, y) {
+    if x == y {
         error("%r == %r" % (x, y))
+    }
+}
 
-def _true(cond, msg = "assertion failed"):
-    if not cond:
+def _true(cond, msg = "assertion failed") {
+    if not cond {
         error(msg)
+    }
+}
 
-def _lt(x, y):
-    if not (x < y):
+def _lt(x, y) {
+    if not (x < y) {
         error("%s is not less than %s" % (x, y))
+    }
+}
 
-def _contains(x, y):
-    if y not in x:
+def _contains(x, y) {
+    if y not in x {
         error("%s does not contain %s" % (x, y))
+    }
+}
 
-def _fails(f, pattern):
+def _fails(f, pattern) {
     "assert_fails asserts that evaluation of f() fails with the specified error."
     msg = catch(f)
-    if msg == None:
+    if msg == None {
         error("evaluation succeeded unexpectedly (want error matching %r)" % pattern)
-    elif not matches(pattern, msg):
+    } elif not matches(pattern, msg) {
         error("regular expression (%s) did not match error (%s)" % (pattern, msg))
+    }
+}
 
 freeze = _freeze  # an exported global whose value is the built-in freeze function
 

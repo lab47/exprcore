@@ -7,7 +7,7 @@ load("assert.star", "assert")
 assert.eq(len([1, 2, 3]), 3)
 assert.eq(len((1, 2, 3)), 3)
 assert.eq(len({1: 2}), 1)
-assert.fails(lambda: len(1), "int.*has no len")
+assert.fails(lambda { len(1), "int.*has no len" })
 
 # and, or
 assert.eq(123 or "foo", 123)
@@ -31,7 +31,7 @@ assert.true(3 in [1, 2, 3])
 assert.true(4 not in [1, 2, 3])
 assert.true(3 in (1, 2, 3))
 assert.true(4 not in (1, 2, 3))
-assert.fails(lambda: 3 in "foo", "in.*requires string as left operand")
+assert.fails(lambda { 3 in "foo", "in.*requires string as left operand" })
 assert.true(123 in {123: ""})
 assert.true(456 not in {123:""})
 assert.true([] not in {123: ""})
@@ -41,22 +41,22 @@ assert.eq(sorted([42, 123, 3]), [3, 42, 123])
 assert.eq(sorted([42, 123, 3], reverse=True), [123, 42, 3])
 assert.eq(sorted(["wiz", "foo", "bar"]), ["bar", "foo", "wiz"])
 assert.eq(sorted(["wiz", "foo", "bar"], reverse=True), ["wiz", "foo", "bar"])
-assert.fails(lambda: sorted([1, 2, None, 3]), "int < NoneType not implemented")
-assert.fails(lambda: sorted([1, "one"]), "string < int not implemented")
+assert.fails(lambda { sorted([1, 2, None, 3]), "int < NoneType not implemented" })
+assert.fails(lambda { sorted([1, "one"]), "string < int not implemented" })
 # custom key function
 assert.eq(sorted(["two", "three", "four"], key=len),
           ["two", "four", "three"])
 assert.eq(sorted(["two", "three", "four"], key=len, reverse=True),
           ["three", "four", "two"])
-assert.fails(lambda: sorted([1, 2, 3], key=None), "got NoneType, want callable")
+assert.fails(lambda { sorted([1, 2, 3], key=None), "got NoneType, want callable" })
 # sort is stable
 pairs = [(4, 0), (3, 1), (4, 2), (2, 3), (3, 4), (1, 5), (2, 6), (3, 7)]
-assert.eq(sorted(pairs, key=lambda x: x[0]),
+assert.eq(sorted(pairs, key=lambda x { x[0] }),
           [(1, 5),
            (2, 3), (2, 6),
            (3, 1), (3, 4), (3, 7),
            (4, 0), (4, 2)])
-assert.fails(lambda: sorted(1), 'sorted: for parameter iterable: got int, want iterable')
+assert.fails(lambda { sorted(1), 'sorted: for parameter iterable: got int, want iterable' })
 
 # reversed
 assert.eq(reversed([1, 144, 81, 16]), [16, 81, 144, 1])
@@ -79,7 +79,7 @@ assert.eq("range(10)", str(range(0, 10, 1)))
 assert.eq("range(1, 10)", str(range(1, 10)))
 assert.eq(range(0, 5, 10), range(0, 5, 11))
 assert.eq("range(0, 10, -1)", str(range(0, 10, -1)))
-assert.fails(lambda: {range(10): 10}, "unhashable: range")
+assert.fails(lambda { {range(10): 10}, "unhashable: range" })
 assert.true(bool(range(1, 2)))
 assert.true(not(range(2, 1))) # an empty range is false
 assert.eq([x*x for x in range(5)], [0, 1, 4, 9, 16])
@@ -104,23 +104,23 @@ assert.eq(list(range(10)[1:11:2]), [1, 3, 5, 7, 9])
 assert.eq(list(range(10)[::-2]), [9, 7, 5, 3, 1])
 assert.eq(list(range(0, 10, 2)[::2]), [0, 4, 8])
 assert.eq(list(range(0, 10, 2)[::-2]), [8, 4, 0])
-assert.fails(lambda: range(3000000000), "3000000000 out of range") # signed 32-bit values only
+assert.fails(lambda { range(3000000000), "3000000000 out of range") # signed 32-bit values onl })
 assert.eq(len(range(0x7fffffff)), 0x7fffffff) # O(1)
 # Two ranges compare equal if they denote the same sequence:
 assert.eq(range(0), range(2, 1, 3))       # []
 assert.eq(range(0, 3, 2), range(0, 4, 2)) # [0, 2]
 assert.ne(range(1, 10), range(2, 10))
-assert.fails(lambda: range(0) < range(0), "range < range not implemented")
+assert.fails(lambda { range(0) < range(0), "range < range not implemented" })
 # <number> in <range>
 assert.contains(range(3), 1)
 assert.contains(range(3), 2.0)    # acts like 2
-assert.fails(lambda: True in range(3), "requires integer.*not bool") # bools aren't numbers
-assert.fails(lambda: "one" in range(10), "requires integer.*not string")
+assert.fails(lambda { True in range(3), "requires integer.*not bool") # bools aren't number })
+assert.fails(lambda { "one" in range(10), "requires integer.*not string" })
 assert.true(4 not in range(4))
 assert.true(1e15 not in range(4)) # too big for int32
 assert.true(1e100 not in range(4)) # too big for int64
 # https://github.com/google/starlark-go/issues/116
-assert.fails(lambda: range(0, 0, 2)[:][0], "index 0 out of range: empty range")
+assert.fails(lambda { range(0, 0, 2)[:][0], "index 0 out of range: empty range" })
 
 # list
 assert.eq(list("abc".elems()), ["a", "b", "c"])
