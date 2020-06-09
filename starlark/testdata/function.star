@@ -9,10 +9,12 @@
 load("assert.star", "assert", "freeze")
 
 # Test lexical scope and closures:
-def outer(x):
-   def inner(y):
+def outer(x) {
+   def inner(y) {
      return x + x + y # multiple occurrences of x should create only 1 freevar
+   }
    return inner
+}
 
 z = outer(3)
 assert.eq(z(5), 11)
@@ -30,12 +32,14 @@ assert.eq(str(str), '<built-in function str>')
 assert.eq(str("".startswith), '<built-in method startswith of string value>')
 
 # Stateful closure
-def squares():
+def squares() {
     x = [0]
-    def f():
+    def f() {
       x[0] += 1
       return x[0] * x[0]
+    }
     return f
+}
 
 sq = squares()
 assert.eq(sq(), 1)
@@ -48,11 +52,13 @@ sq2 = freeze(sq)
 assert.fails(sq2, "frozen list")
 
 # recursion detection, simple
-def fib(x):
-  if x < 2:
+def fib(x) {
+  if x < 2 {
     return x
+  }
   return fib(x-2) + fib(x-1)
-assert.fails(lambda: fib(10), "function fib called recursively")
+}
+assert.fails(=> fib(10), "function fib called recursively")
 
 # recursion detection, advanced
 #
@@ -61,21 +67,23 @@ assert.fails(lambda: fib(10), "function fib called recursively")
 # combinator, which creates a new closure at each step of the
 # recursion.  To truly prohibit recursion, the dynamic check must look
 # for repeated calls of the same syntactic function body.
-Y = lambda f: (lambda x: x(x))(lambda y: f(lambda *args: y(y)(*args)))
-fibgen = lambda fib: lambda x: (x if x<2 else fib(x-1)+fib(x-2))
+Y = f => {
+  (x => x(x))(y => f((*args) => y(y)(*args)))
+}
+fibgen = fib => x => (x if x<2 else fib(x-1)+fib(x-2))
 fib2 = Y(fibgen)
-assert.fails(lambda: [fib2(x) for x in range(10)], "function lambda called recursively")
+assert.fails(=> [fib2(x) for x in range(10)], "function lambda called recursively")
 
 # However, this stricter check outlaws many useful programs
 # that are still bounded, and creates a hazard because
 # helper functions such as map below cannot be used to
 # call functions that themselves use map:
-def map(f, seq): return [f(x) for x in seq]
-def double(x): return x+x
+def map(f, seq) { return [f(x) for x in seq] }
+def double(x) { return x+x }
 assert.eq(map(double, [1, 2, 3]), [2, 4, 6])
 assert.eq(map(double, ["a", "b", "c"]), ["aa", "bb", "cc"])
-def mapdouble(x): return map(double, x)
-assert.fails(lambda: map(mapdouble, ([1, 2, 3], ["a", "b", "c"])),
+def mapdouble(x) { return map(double, x) }
+assert.fails(=> map(mapdouble, ([1, 2, 3], ["a", "b", "c"])),
              'function map called recursively')
 # With the -recursion option it would yield [[2, 4, 6], ["aa", "bb", "cc"]].
 
@@ -84,23 +92,28 @@ assert.fails(lambda: map(mapdouble, ([1, 2, 3], ["a", "b", "c"])),
 hf = hasfields()
 hf.x = [len]
 assert.eq(hf.x[0]("abc"), 3)
-def f():
-   return lambda: 1
+def f() {
+   return => 1
+  }
 assert.eq(f()(), 1)
 assert.eq(["abc"][0][0].upper(), "A")
 
 # functions may be recursively defined,
 # so long as they don't dynamically recur.
 calls = []
-def yin(x):
+def yin(x) {
   calls.append("yin")
-  if x:
+  if x {
     yang(False)
+  }
+}
 
-def yang(x):
+def yang(x) {
   calls.append("yang")
-  if x:
+  if x {
     yin(False)
+  }
+}
 
 yin(True)
 assert.eq(calls, ["yin", "yang"])
@@ -118,8 +131,9 @@ assert.eq(len(closures), 10)
 # Default values of function parameters are mutable.
 load("assert.star", "assert", "freeze")
 
-def f(x=[0]):
+def f(x=[0]) {
   return x
+}
 
 assert.eq(f(), [0])
 
@@ -128,7 +142,7 @@ assert.eq(f(), [0, 1])
 
 # Freezing a function value freezes its parameter defaults.
 freeze(f)
-assert.fails(lambda: f().append(2), "cannot append to frozen list")
+assert.fails(=> f().append(2), "cannot append to frozen list")
 
 ---
 # This is a well known corner case of parsing in Python.
@@ -142,7 +156,7 @@ x = True
 f2 = (lambda x: 1) if x else 0
 assert.eq(f2(123), 1)
 
-tf = lambda: True, lambda: False
+tf = => True, => False
 assert.true(tf[0]())
 assert.true(not tf[1]())
 
@@ -162,10 +176,11 @@ def f(a, b, c, d, e, f, g, h,
       O, P, Q, R, S, T, U, V,
       W, X, Y, Z, aa, bb, cc, dd,
       ee, ff, gg, hh, ii, jj, kk, ll,
-      mm):
+      mm) {
   pass
+}
 
-assert.fails(lambda: f(
+assert.fails(=> f(
     1, 2, 3, 4, 5, 6, 7, 8,
     9, 10, 11, 12, 13, 14, 15, 16,
     17, 18, 19, 20, 21, 22, 23, 24,
@@ -175,7 +190,7 @@ assert.fails(lambda: f(
     49, 50, 51, 52, 53, 54, 55, 56,
     57, 58, 59, 60, 61, 62, 63, 64), "missing 1 argument \\(mm\\)")
 
-assert.fails(lambda: f(
+assert.fails(=> f(
     1, 2, 3, 4, 5, 6, 7, 8,
     9, 10, 11, 12, 13, 14, 15, 16,
     17, 18, 19, 20, 21, 22, 23, 24,
@@ -194,25 +209,28 @@ assert.fails(lambda: f(
 
 load("assert.star", "assert")
 
-def f(*args, **kwargs):
+def f(*args, **kwargs) {
   return args, kwargs
+}
 
 assert.eq(f(x=1, y=2), ((), {"x": 1, "y": 2}))
-assert.fails(lambda: f(x=1, **dict(x=2)), 'multiple values for parameter "x"')
+assert.fails(=> f(x=1, **dict(x=2)), 'multiple values for parameter "x"')
 
-def g(x, y):
+def g(x, y) {
   return x, y
+}
 
 assert.eq(g(1, y=2), (1, 2))
-assert.fails(lambda: g(1, y=2, **{'y': 3}), 'multiple values for parameter "y"')
+assert.fails(=> g(1, y=2, **{'y': 3}), 'multiple values for parameter "y"')
 
 ---
 # Regression test for a bug in CALL_VAR_KW.
 
 load("assert.star", "assert")
 
-def f(a, b, x, y):
+def f(a, b, x, y) {
   return a+b+x+y
+}
 
 assert.eq(f(*("a", "b"), **dict(y="y", x="x")) + ".", 'abxy.')
 ---
@@ -222,12 +240,14 @@ load("assert.star", "assert")
 
 r = []
 
-def id(x):
+def id(x) {
        r.append(x)
        return x
+}
 
-def f(*args, **kwargs):
+def f(*args, **kwargs) {
   return (args, kwargs)
+}
 
 y = f(id(1), id(2), x=id(3), *[id(4)], y=id(5), **dict(z=id(6)))
 assert.eq(y, ((1, 2, 4), dict(x=3, y=5, z=6)))
@@ -243,49 +263,56 @@ assert.eq(r, [1, 2, 3, 5, 4, 6])
 # See github.com/bazelbuild/starlark#170
 load("assert.star", "assert")
 
-def a():
+def a() {
     list = []
-    def b(n):
+    def b(n) {
         list.append(n)
-        if n > 0:
+        if n > 0 {
             b(n - 1) # recursive reference to b
+        }
+    }
 
     b(3)
     return list
+}
 
 assert.eq(a(), [3, 2, 1, 0])
 
-def c():
+def c() {
     list = []
     x = 1
-    def d():
+    def d() {
       list.append(x) # this use of x observes both assignments
+    }
     d()
     x = 2
     d()
     return list
+}
 
 assert.eq(c(), [1, 2])
 
-def e():
-    def f():
+def e() {
+    def f() {
       return x # forward reference ok: x is a closure cell
+    }
     x = 1
     return f()
-
+}
 assert.eq(e(), 1)
 
 ---
 # option:nesteddef
 load("assert.star", "assert")
 
-def e():
+def e() {
     x = 1
-    def f():
+    def f() {
       print(x) # this reference to x fails
       x = 3    # because this assignment makes x local to f
+    }
     f()
-
+}
 assert.fails(e, "local variable x referenced before assignment")
 
 
@@ -294,11 +321,11 @@ assert.fails(e, "local variable x referenced before assignment")
 # This reduces the need to edit neighboring lines when editing defs
 # or calls splayed across multiple lines.
 
-def a(x,): pass
-def b(x, y=None, ): pass
-def c(x, y=None, *args, ): pass
-def d(x, y=None, *args, z=None, ): pass
-def e(x, y=None, *args, z=None, **kwargs, ): pass
+def a(x,) { pass }
+def b(x, y=None, ) { pass }
+def c(x, y=None, *args, ) { pass }
+def d(x, y=None, *args, z=None, ) { pass }
+def e(x, y=None, *args, z=None, **kwargs, ) { pass }
 
 a(1,)
 b(1, y=2, )

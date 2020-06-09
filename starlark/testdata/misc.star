@@ -41,14 +41,14 @@
 load("assert.star", "assert")
 
 # Ordered comparisons require values of the same type.
-assert.fails(lambda: None < False, "not impl")
-assert.fails(lambda: False < list, "not impl")
-assert.fails(lambda: list < {}, "not impl")
-assert.fails(lambda: {} < (lambda: None), "not impl")
-assert.fails(lambda: (lambda: None) < 0, "not impl")
-assert.fails(lambda: 0 < [], "not impl")
-assert.fails(lambda: [] < "", "not impl")
-assert.fails(lambda: "" < (), "not impl")
+assert.fails(=> None < False, "not impl")
+assert.fails(=> False < list, "not impl")
+assert.fails(=> list < {}, "not impl")
+assert.fails(=> { {} < (=> None) }, "not impl")
+assert.fails(=> (=> None) < 0, "not impl")
+assert.fails(=> 0 < [], "not impl")
+assert.fails(=> [] < "", "not impl")
+assert.fails(=> "" < (), "not impl")
 # Except int < float:
 assert.lt(1, 2.0)
 assert.lt(2.0, 3)
@@ -60,11 +60,11 @@ load("assert.star", "assert")
 cyclic = [1, 2, 3] # list cycle
 cyclic[1] = cyclic
 assert.eq(str(cyclic), "[1, [...], 3]")
-assert.fails(lambda: cyclic < cyclic, "maximum recursion")
-assert.fails(lambda: cyclic == cyclic, "maximum recursion")
+assert.fails(=> cyclic < cyclic, "maximum recursion")
+assert.fails(=> cyclic == cyclic, "maximum recursion")
 cyclic2 = [1, 2, 3]
 cyclic2[1] = cyclic2
-assert.fails(lambda: cyclic2 == cyclic, "maximum recursion")
+assert.fails(=> cyclic2 == cyclic, "maximum recursion")
 
 cyclic3 = [1, [2, 3]] # list-list cycle
 cyclic3[1][0] = cyclic3
@@ -76,10 +76,10 @@ cyclic5 = [0, {"x": 1}] # list-dict cycle
 cyclic5[1]["x"] = cyclic5
 assert.eq(str(cyclic5), "[0, {\"x\": [...]}]")
 assert.eq(str(cyclic5), "[0, {\"x\": [...]}]")
-assert.fails(lambda: cyclic5 == cyclic5 ,"maximum recursion")
+assert.fails(=> cyclic5 == cyclic5 ,"maximum recursion")
 cyclic6 = [0, {"x": 1}]
 cyclic6[1]["x"] = cyclic6
-assert.fails(lambda: cyclic5 == cyclic6, "maximum recursion")
+assert.fails(=> cyclic5 == cyclic6, "maximum recursion")
 
 ---
 # regression
@@ -130,9 +130,9 @@ assert.eq(() + (1,) + t + (2, 3), (1, 4, 2, 3))
 assert.eq([] + [1] + [2, 3], [1, 2, 3])
 assert.eq([] + [1] + l + [2, 3], [1, 4, 2, 3])
 
-assert.fails(lambda: "a" + "b" + 1 + "c", "unknown binary op: string \\+ int")
-assert.fails(lambda: () + () + 1 + (), "unknown binary op: tuple \\+ int")
-assert.fails(lambda: [] + [] + 1 + [], "unknown binary op: list \\+ int")
+assert.fails(=> "a" + "b" + 1 + "c", "unknown binary op: string \\+ int")
+assert.fails(=> () + () + 1 + (), "unknown binary op: tuple \\+ int")
+assert.fails(=> [] + [] + 1 + [], "unknown binary op: list \\+ int")
 
 
 

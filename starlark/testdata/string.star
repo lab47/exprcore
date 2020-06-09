@@ -23,9 +23,9 @@ assert.eq(0 * "abc", "")
 assert.eq(-1 * "abc", "")
 assert.eq(1 * "abc", "abc")
 assert.eq(5 * "abc", "abcabcabcabcabc")
-assert.fails(lambda: 1.0 * "abc", "unknown.*float \\* str")
-assert.fails(lambda : "abc" * (1000000 * 1000000), "repeat count 1000000000000 too large")
-assert.fails(lambda : "abc" * 1000000 * 1000000, "excessive repeat .3000000000000 elements")
+assert.fails(=> 1.0 * "abc", "unknown.*float \\* str")
+assert.fails(=> "abc" * (1000000 * 1000000), "repeat count 1000000000000 too large")
+assert.fails(=> "abc" * 1000000 * 1000000, "excessive repeat .3000000000000 elements")
 
 # len
 assert.eq(len("Hello, 世界!"), 14)
@@ -35,15 +35,15 @@ assert.eq(len("𐐷"), 4) # U+10437 has a 4-byte UTF-8 encoding (and a 2-code UT
 assert.eq(chr(65), "A")       # 1-byte UTF-8 encoding
 assert.eq(chr(1049), "Й")     # 2-byte UTF-8 encoding
 assert.eq(chr(0x1F63F), "😿") # 4-byte UTF-8 encoding
-assert.fails(lambda: chr(-1), "Unicode code point -1 out of range \\(<0\\)")
-assert.fails(lambda: chr(0x110000), "Unicode code point U\\+110000 out of range \\(>0x10FFFF\\)")
+assert.fails(=> chr(-1), "Unicode code point -1 out of range \\(<0\\)")
+assert.fails(=> chr(0x110000), "Unicode code point U\\+110000 out of range \\(>0x10FFFF\\)")
 assert.eq(ord("A"), 65)
 assert.eq(ord("Й"), 1049)
 assert.eq(ord("😿"), 0x1F63F)
 assert.eq(ord("Й"[1:]), 0xFFFD) # = Unicode replacement character
-assert.fails(lambda: ord("abc"), "string encodes 3 Unicode code points, want 1")
-assert.fails(lambda: ord(""), "string encodes 0 Unicode code points, want 1")
-assert.fails(lambda: ord("😿"[1:]), "string encodes 3 Unicode code points, want 1") # 3 x 0xFFFD
+assert.fails(=> ord("abc"), "string encodes 3 Unicode code points, want 1")
+assert.fails(=> ord(""), "string encodes 0 Unicode code points, want 1")
+assert.fails(=> ord("😿"[1:]), "string encodes 3 Unicode code points, want 1") # 3 x 0xFFFD
 
 # string.codepoint_ords
 assert.eq(type("abcЙ😿".codepoint_ords()), "codepoints")
@@ -79,18 +79,18 @@ assert.eq(list("".elems()), [])
 assert.eq("Hello, 世界!"[0], "H")
 assert.eq("Hello, 世界!"[7], "\xe4")
 assert.eq("Hello, 世界!"[13], "!")
-assert.fails(lambda: "abc"[-4], "out of range")
+assert.fails(=> "abc"[-4], "out of range")
 assert.eq("abc"[-3], "a")
 assert.eq("abc"[-2], "b")
 assert.eq("abc"[-1], "c")
 assert.eq("abc"[0], "a")
 assert.eq("abc"[1], "b")
 assert.eq("abc"[2], "c")
-assert.fails(lambda: "abc"[4], "out of range")
+assert.fails(=> "abc"[4], "out of range")
 
 # x[i] = ...
 x2 = "abc"
-def f(): x2[1] = 'B'
+def f() { x2[1] = 'B' }
 assert.fails(f, "string.*does not support.*assignment")
 
 # slicing, x[i:j]
@@ -126,17 +126,17 @@ assert.eq("banana"[5::-2], "aaa")
 assert.eq("banana"[4::-2], "nnb")
 assert.eq("banana"[::-1], "ananab")
 assert.eq("banana"[None:None:-2], "aaa")
-assert.fails(lambda: "banana"[1.0::], "invalid start index: got float, want int")
-assert.fails(lambda: "banana"[:"":], "invalid end index: got string, want int")
-assert.fails(lambda: "banana"[:"":True], "got bool for slice step, want int")
+assert.fails(=> "banana"[1.0::], "invalid start index: got float, want int")
+assert.fails(=> "banana"[:"":], "invalid end index: got string, want int")
+assert.fails(=> "banana"[:"":True], "got bool for slice step, want int")
 
 # in, not in
 assert.true("oo" in "food")
 assert.true("ox" not in "food")
 assert.true("" in "food")
 assert.true("" in "")
-assert.fails(lambda: 1 in "", "requires string as left operand")
-assert.fails(lambda: "" in 1, "unknown binary op: string in int")
+assert.fails(=> 1 in "", "requires string as left operand")
+assert.fails(=> "" in 1, "unknown binary op: string in int")
 
 # ==, !=
 assert.eq("hello", "he"+"llo")
@@ -160,19 +160,19 @@ assert.eq("A %d %x Z" % (123, 456), "A 123 1c8 Z")
 assert.eq("A %(foo)d %(bar)s Z" % {"foo": 123, "bar":"hi"}, "A 123 hi Z")
 assert.eq("%s %r" % ("hi", "hi"), 'hi "hi"') # TODO(adonovan): use ''-quotation
 assert.eq("%%d %d" % 1, "%d 1")
-assert.fails(lambda: "%d %d" % 1, "not enough arguments for format string")
-assert.fails(lambda: "%d %d" % (1, 2, 3), "too many arguments for format string")
-assert.fails(lambda: "" % 1, "too many arguments for format string")
+assert.fails(=> "%d %d" % 1, "not enough arguments for format string")
+assert.fails(=> "%d %d" % (1, 2, 3), "too many arguments for format string")
+assert.fails(=> "" % 1, "too many arguments for format string")
 # %c
 assert.eq("%c" % 65, "A")
 assert.eq("%c" % 0x3b1, "α")
 assert.eq("%c" % "A", "A")
 assert.eq("%c" % "α", "α")
-assert.fails(lambda: "%c" % "abc", "requires a single-character string")
-assert.fails(lambda: "%c" % "", "requires a single-character string")
-assert.fails(lambda: "%c" % 65.0, "requires int or single-character string")
-assert.fails(lambda: "%c" % 10000000, "requires a valid Unicode code point")
-assert.fails(lambda: "%c" % -1, "requires a valid Unicode code point")
+assert.fails(=> "%c" % "abc", "requires a single-character string")
+assert.fails(=> "%c" % "", "requires a single-character string")
+assert.fails(=> "%c" % 65.0, "requires int or single-character string")
+assert.fails(=> "%c" % 10000000, "requires a valid Unicode code point")
+assert.fails(=> "%c" % -1, "requires a valid Unicode code point")
 # TODO(adonovan): more tests
 
 # str.format
@@ -182,30 +182,30 @@ assert.eq("a{{b".format(), "a{b")
 assert.eq("a}}b".format(), "a}b")
 assert.eq("a{{b}}c".format(), "a{b}c")
 assert.eq("a{x}b{y}c{}".format(1, x=2, y=3), "a2b3c1")
-assert.fails(lambda: "a{z}b".format(x=1), "keyword z not found")
-assert.fails(lambda: "{-1}".format(1), "keyword -1 not found")
-assert.fails(lambda: "{-0}".format(1), "keyword -0 not found")
-assert.fails(lambda: "{+0}".format(1), "keyword \\+0 not found")
-assert.fails(lambda: "{+1}".format(1), "keyword \\+1 not found") # starlark-go/issues/114
+assert.fails(=> "a{z}b".format(x=1), "keyword z not found")
+assert.fails(=> "{-1}".format(1), "keyword -1 not found")
+assert.fails(=> "{-0}".format(1), "keyword -0 not found")
+assert.fails(=> "{+0}".format(1), "keyword \\+0 not found")
+assert.fails(=> "{+1}".format(1), "keyword \\+1 not found") # starlark-go/issues/114
 assert.eq("{0000000000001}".format(0, 1), "1")
 assert.eq("{012}".format(*range(100)), "12") # decimal, despite leading zeros
-assert.fails(lambda: '{0,1} and {1}'.format(1, 2), "keyword 0,1 not found")
-assert.fails(lambda: "a{123}b".format(), "tuple index out of range")
-assert.fails(lambda: "a{}b{}c".format(1), "tuple index out of range")
+assert.fails(=> '{0,1} and {1}'.format(1, 2), "keyword 0,1 not found")
+assert.fails(=> "a{123}b".format(), "tuple index out of range")
+assert.fails(=> "a{}b{}c".format(1), "tuple index out of range")
 assert.eq("a{010}b".format(0,1,2,3,4,5,6,7,8,9,10), "a10b") # index is decimal
-assert.fails(lambda: "a{}b{1}c".format(1, 2), "cannot switch from automatic field numbering to manual")
+assert.fails(=> "a{}b{1}c".format(1, 2), "cannot switch from automatic field numbering to manual")
 assert.eq("a{!s}c".format("b"), "abc")
 assert.eq("a{!r}c".format("b"), r'a"b"c')
 assert.eq("a{x!r}c".format(x='b'), r'a"b"c')
-assert.fails(lambda: "{x!}".format(x=1), "unknown conversion")
-assert.fails(lambda: "{x!:}".format(x=1), "unknown conversion")
-assert.fails(lambda: '{a.b}'.format(1), "syntax x.y is not supported")
-assert.fails(lambda: '{a[0]}'.format(1), "syntax a\\[i\\] is not supported")
-assert.fails(lambda: '{ {} }'.format(1), "nested replacement fields not supported")
-assert.fails(lambda: '{{}'.format(1), "single '}' in format")
-assert.fails(lambda: '{}}'.format(1), "single '}' in format")
-assert.fails(lambda: '}}{'.format(1), "unmatched '{' in format")
-assert.fails(lambda: '}{{'.format(1), "single '}' in format")
+assert.fails(=> "{x!}".format(x=1), "unknown conversion")
+assert.fails(=> "{x!:}".format(x=1), "unknown conversion")
+assert.fails(=> '{a.b}'.format(1), "syntax x.y is not supported")
+assert.fails(=> '{a[0]}'.format(1), "syntax a\\[i\\] is not supported")
+assert.fails(=> '{ {} }'.format(1), "nested replacement fields not supported")
+assert.fails(=> '{{}'.format(1), "single '}' in format")
+assert.fails(=> '{}}'.format(1), "single '}' in format")
+assert.fails(=> '}}{'.format(1), "unmatched '{' in format")
+assert.fails(=> '}{{'.format(1), "single '}' in format")
 
 # str.split, str.rsplit
 assert.eq("a.b.c.d".split("."), ["a", "b", "c", "d"])
@@ -304,19 +304,19 @@ assert.true("foo".endswith("oo"))
 assert.true(not "foo".endswith("x"))
 assert.true("foo".startswith("fo"))
 assert.true(not "foo".startswith("x"))
-assert.fails(lambda: "foo".startswith(1), "got int.*want string")
+assert.fails(=> "foo".startswith(1), "got int.*want string")
 #
 assert.true('abc'.startswith(('a', 'A')))
 assert.true('ABC'.startswith(('a', 'A')))
 assert.true(not 'ABC'.startswith(('b', 'B')))
-assert.fails(lambda: '123'.startswith((1, 2)), 'got int, for element 0')
-assert.fails(lambda: '123'.startswith(['3']), 'got list')
+assert.fails(=> '123'.startswith((1, 2)), 'got int, for element 0')
+assert.fails(=> '123'.startswith(['3']), 'got list')
 #
 assert.true('abc'.endswith(('c', 'C')))
 assert.true('ABC'.endswith(('c', 'C')))
 assert.true(not 'ABC'.endswith(('b', 'B')))
-assert.fails(lambda: '123'.endswith((1, 2)), 'got int, for element 0')
-assert.fails(lambda: '123'.endswith(['3']), 'got list')
+assert.fails(=> '123'.endswith((1, 2)), 'got int, for element 0')
+assert.fails(=> '123'.endswith(['3']), 'got list')
 # start/end
 assert.true('abc'.startswith('bc', 1))
 assert.true(not 'abc'.startswith('b', 999))
@@ -343,13 +343,13 @@ assert.eq("foo/bar/wiz".partition("/"), ("foo", "/", "bar/wiz"))
 assert.eq("foo/bar/wiz".rpartition("/"), ("foo/bar", "/", "wiz"))
 assert.eq("foo/bar/wiz".partition("."), ("foo/bar/wiz", "", ""))
 assert.eq("foo/bar/wiz".rpartition("."), ("", "", "foo/bar/wiz"))
-assert.fails(lambda: "foo/bar/wiz".partition(""), "empty separator")
-assert.fails(lambda: "foo/bar/wiz".rpartition(""), "empty separator")
+assert.fails(=> "foo/bar/wiz".partition(""), "empty separator")
+assert.fails(=> "foo/bar/wiz".rpartition(""), "empty separator")
 
 assert.eq('?'.join(["foo", "a/b/c.go".rpartition("/")[0]]), 'foo?a/b')
 
 # str.is{alpha,...}
-def test_predicates():
+def test_predicates() {
   predicates = ["alnum", "alpha", "digit", "lower", "space", "title", "upper"]
   table = {
       "Hello, World!": "title",
@@ -367,10 +367,13 @@ def test_predicates():
       "ǅ ǈ": "title",
       "ǆǉ": "alnum alpha lower",
   }
-  for str, want in table.items():
+  for str, want in table.items() {
     got = ' '.join([name for name in predicates if getattr(str, "is"+name)()])
-    if got != want:
+    if got != want {
       assert.fail("%r matched [%s], want [%s]" % (str, got, want))
+    }
+  }
+}
 test_predicates()
 
 # Strings are not iterable.
@@ -379,28 +382,30 @@ assert.eq(len("abc"), 3)                       # len
 assert.true("a" in "abc")                      # str in str
 assert.eq("abc"[1], "b")                       # indexing
 # not ok
-def for_string():
-  for x in "abc":
+def for_string() {
+  for x in "abc" {
     pass
-def args(*args): return args
-assert.fails(lambda: args(*"abc"), "must be iterable, not string") # varargs
-assert.fails(lambda: list("abc"), "got string, want iterable") # list(str)
-assert.fails(lambda: tuple("abc"), "got string, want iterable") # tuple(str)
-assert.fails(lambda: set("abc"), "got string, want iterable") # set(str)
-assert.fails(lambda: set() | "abc", "unknown binary op: set | string")  # set union
-assert.fails(lambda: enumerate("ab"), "got string, want iterable") # enumerate
-assert.fails(lambda: sorted("abc"), "got string, want iterable") # sorted
-assert.fails(lambda: [].extend("bc"), "got string, want iterable") # list.extend
-assert.fails(lambda: ",".join("abc"), "got string, want iterable") # string.join
-assert.fails(lambda: dict(["ab"]), "not iterable .*string") # dict
+  }
+}
+def args(*args) { return args }
+assert.fails(=> args(*"abc"), "must be iterable, not string") # varargs
+assert.fails(=> list("abc"), "got string, want iterable") # list(str)
+assert.fails(=> tuple("abc"), "got string, want iterable") # tuple(str)
+assert.fails(=> set("abc"), "got string, want iterable") # set(str)
+assert.fails(=> set() | "abc", "unknown binary op: set | string")  # set union
+assert.fails(=> enumerate("ab"), "got string, want iterable") # enumerate
+assert.fails(=> sorted("abc"), "got string, want iterable") # sorted
+assert.fails(=> [].extend("bc"), "got string, want iterable") # list.extend
+assert.fails(=> ",".join("abc"), "got string, want iterable") # string.join
+assert.fails(=> dict(["ab"]), "not iterable .*string") # dict
 # The Java implementation does not correctly reject the following cases:
 # (See Google Issue b/34385336)
 assert.fails(for_string, "string value is not iterable") # for loop
-assert.fails(lambda: [x for x in "abc"], "string value is not iterable") # comprehension
-assert.fails(lambda: all("abc"), "got string, want iterable") # all
-assert.fails(lambda: any("abc"), "got string, want iterable") # any
-assert.fails(lambda: reversed("abc"), "got string, want iterable") # reversed
-assert.fails(lambda: zip("ab", "cd"), "not iterable: string") # zip
+assert.fails(=> [x for x in "abc"], "string value is not iterable") # comprehension
+assert.fails(=> all("abc"), "got string, want iterable") # all
+assert.fails(=> any("abc"), "got string, want iterable") # any
+assert.fails(=> reversed("abc"), "got string, want iterable") # reversed
+assert.fails(=> zip("ab", "cd"), "not iterable: string") # zip
 
 # str.join
 assert.eq(','.join([]), '')
@@ -409,8 +414,8 @@ assert.eq(','.join(["a", "b"]), 'a,b')
 assert.eq(','.join(["a", "b", "c"]), 'a,b,c')
 assert.eq(','.join(("a", "b", "c")), 'a,b,c')
 assert.eq(''.join(("a", "b", "c")), 'abc')
-assert.fails(lambda: ''.join(None), 'got NoneType, want iterable')
-assert.fails(lambda: ''.join(["one", 2]), 'join: in list, want string, got int')
+assert.fails(=> ''.join(None), 'got NoneType, want iterable')
+assert.fails(=> ''.join(["one", 2]), 'join: in list, want string, got int')
 
 # TODO(adonovan): tests for: {,r}index
 
@@ -442,6 +447,6 @@ assert.true("ǅenan ǈubović".istitle())
 assert.true(not "Ǆenan Ǉubović".istitle())
 
 # method spell check
-assert.fails(lambda: "".starts_with, "no .starts_with field.*did you mean .startswith")
-assert.fails(lambda: "".StartsWith, "no .StartsWith field.*did you mean .startswith")
-assert.fails(lambda: "".fin, "no .fin field.*.did you mean .find")
+assert.fails(=> "".starts_with, "no .starts_with field.*did you mean .startswith")
+assert.fails(=> "".StartsWith, "no .StartsWith field.*did you mean .startswith")
+assert.fails(=> "".fin, "no .fin field.*.did you mean .find")

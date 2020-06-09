@@ -2,63 +2,77 @@
 
 load("assert.star", "assert")
 
-def controlflow():
+def controlflow() {
   # elif
   x = 0
-  if True:
+  if True {
     x=1
-  elif False:
+  } elif False {
     assert.fail("else of true")
-  else:
+  } else {
     assert.fail("else of else of true")
+  }
   assert.true(x)
 
   x = 0
-  if False:
+  if False {
     assert.fail("then of false")
-  elif True:
+  } elif True {
     x = 1
-  else:
+  } else {
     assert.fail("else of true")
+  }
   assert.true(x)
 
   x = 0
-  if False:
+  if False {
     assert.fail("then of false")
-  elif False:
+  } elif False {
     assert.fail("then of false")
-  else:
+  } else {
     x = 1
+  }
   assert.true(x)
+}
 controlflow()
 
-def loops():
+def loops() {
   y = ""
-  for x in [1, 2, 3, 4, 5]:
-    if x == 2:
+  for x in [1, 2, 3, 4, 5] {
+    if x == 2 {
       continue
-    if x == 4:
+    }
+    if x == 4 {
       break
+    }
     y = y + str(x)
+  }
   return y
+}
 assert.eq(loops(), "13")
 
 # return
 g = 123
-def f(x):
-  for g in (1, 2, 3):
-    if g == x:
+def f(x) {
+  for g in (1, 2, 3) {
+    if g == x {
       return g
+    }
+  }
+}
 assert.eq(f(2), 2)
 assert.eq(f(4), None) # falling off end => return None
 assert.eq(g, 123) # unchanged by local use of g in function
 
 # infinite sequences
-def fib(n):
+def fib(n) {
   seq = []
-  for x in fibonacci: # fibonacci is an infinite iterable defined in eval_test.go
-    if len(seq) == n:
+  for x in fibonacci { # fibonacci is an infinite iterable defined in eval_test.go
+    if len(seq) == n {
       break
+    }
     seq.append(x)
+  }
   return seq
+}
 assert.eq(fib(10),  [0, 1, 1, 2, 3, 5, 8, 13, 21, 34])

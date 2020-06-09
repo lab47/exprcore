@@ -117,7 +117,7 @@ pass`, "pass ; pass ; EOF"}, // consecutive newlines are consolidated
 		{"pass\n \n", "pass ; EOF"},
 		{"if x {\n  }\n ", "if x { } ; EOF"},
 		{`x = 1 + \
-2`, `x = 1 + 2 EOF`},
+2`, `x = 1 + 2 ; EOF`},
 		{`x = 'a\nb'`, `x = "a\nb" ; EOF`},
 		{`x = r'a\nb'`, `x = "a\\nb" ; EOF`},
 		{"x = 'a\\\nb'", `x = "ab" ; EOF`},
@@ -252,6 +252,10 @@ pass`, "pass ; pass ; EOF"}, // consecutive newlines are consolidated
 			`if True { pass ; } else { pass } ; EOF`},
 		{"if cond {\n\tpass\n}",
 			`if cond { pass ; } ; EOF`},
+		{"{\nx: y for a in b if c\n}",
+			`{ x : y for a in b if c ; } ; EOF`},
+		{"1 + 2\n1", `1 + 2 ; 1 ; EOF`},
+		{"1 + \\\n2\n1", `1 + 2 ; 1 ; EOF`},
 	} {
 		got, err := scan(test.input)
 		if err != nil {

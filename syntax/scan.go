@@ -461,15 +461,15 @@ func (sc *scanner) nextToken(val *tokenValue) Token {
 	// usually (~97%) false on entry, skipped newlines account for
 	// about 50% of all iterations of the 'start' loop.
 
-start:
-	var c rune
-
 	insertSemi := false
 
 	// Replace the value with the updated on on every time through
 	defer func() {
 		sc.insertSemi = insertSemi
 	}()
+
+start:
+	var c rune
 
 	// Deal with leading spaces and indentation.
 	blank := false

@@ -51,17 +51,17 @@ M()
 ---
 # locals may be referenced before they are defined
 
-def f():
+def f() {
    M(x) # dynamic error
    x = 1
-
+}
 ---
 # Various forms of assignment:
 
-def f(x): # parameter
+def f(x) { # parameter
     M(x)
     M(y) ### "undefined: y"
-
+}
 (a, b) = 1, 2
 M(a)
 M(b)
@@ -80,15 +80,18 @@ M(x) ### "undefined: x"
 
 ---
 # Functions may have forward refs.   (option:lambda option:nesteddef)
-def f():
+def f() {
    g()
    h() ### "undefined: h"
-   def inner():
+   def inner() {
      i()
      i = lambda: 0
+   }
+}
 
-def g():
+def g() {
   f()
+}
 
 ---
 # It is not permitted to rebind a global using a += assignment.
@@ -97,17 +100,18 @@ x = [1]
 x.extend([2]) # ok
 x += [3] ### `cannot reassign global x`
 
-def f():
+def f() {
    x += [4] # x is local to f
-
+}
 y = 1
 y += 2 ### `cannot reassign global y`
 z += 3 # ok (but fails dynamically because z is undefined)
 
 ---
-def f(a):
-  if 1==1:
+def f(a) {
+  if 1==1 {
     b = 1
+  }
   c = 1
   M(a) # ok: param
   M(b) # ok: maybe bound local
@@ -116,25 +120,25 @@ def f(a):
   M(e) # ok: global
   M(f) # ok: global
   d = 1
-
+}
 e = 1
 
 ---
 # This program should resolve successfully but fail dynamically.
 x = 1
 
-def f():
+def f() {
   M(x) # dynamic error: reference to undefined local
   x = 2
-
+}
 f()
 
 ---
 load("module", "name") # ok
 
-def f():
+def f() {
   load("foo", "bar") ### "load statement within a function"
-
+}
 load("foo",
      "",     ### "load: empty identifier"
      "_a",   ### "load: names with leading underscores are not exported: _a"
@@ -151,44 +155,51 @@ return ### "return statement not within a function"
 # if-statements and for-loops at top-level are forbidden
 # (without globalreassign option)
 
-for x in "abc": ### "for loop not within a function"
+for x in "abc" { ### "for loop not within a function"
   pass
+}
 
-if x: ### "if statement not within a function"
+if x { ### "if statement not within a function"
   pass
-
+}
 ---
 # option:globalreassign
 
-for x in "abc": # ok
+for x in "abc" { # ok
   pass
-
-if x: # ok
+}
+if x { # ok
   pass
+}
 
 ---
 # while loops are forbidden (without -recursion option)
 
-def f():
-  while U: ### "dialect does not support while loops"
+def f() {
+  while U { ### "dialect does not support while loops"
     pass
+  }
+}
 
 ---
 # option:recursion
 
-def f():
-  while U: # ok
+def f() {
+  while U { # ok
     pass
+  }
+}
 
-while U: ### "while loop not within a function"
+while U { ### "while loop not within a function"
   pass
+}
 
 ---
 # option:globalreassign option:recursion
 
-while U: # ok
+while U { # ok
   pass
-
+}
 ---
 # The parser allows any expression on the LHS of an assignment.
 
@@ -217,55 +228,47 @@ pass
 
 M(x=1, 2) ### `positional argument may not follow named`
 
-def f(x=1, y): pass ### `required parameter may not follow optional`
+def f(x=1, y) {} ### `required parameter may not follow optional`
 ---
 # No parameters may follow **kwargs in a declaration.
 
-def f(**kwargs, x): ### `parameter may not follow \*\*kwargs`
-  pass
+def f(**kwargs, x) {} ### `parameter may not follow \*\*kwargs`
 
-def g(**kwargs, *args): ### `\* parameter may not follow \*\*kwargs`
-  pass
+def g(**kwargs, *args) {} ### `\* parameter may not follow \*\*kwargs`
 
-def h(**kwargs1, **kwargs2): ### `multiple \*\* parameters not allowed`
-  pass
+def h(**kwargs1, **kwargs2) {} ### `multiple \*\* parameters not allowed`
 
 ---
 # Only keyword-only params and **kwargs may follow *args in a declaration.
 
-def f(*args, x): # ok
-  pass
+def f(*args, x) {} # ok
 
-def g(*args1, *args2): ### `multiple \* parameters not allowed`
-  pass
+def g(*args1, *args2) {} ### `multiple \* parameters not allowed`
 
 def h(*, ### `bare \* must be followed by keyword-only parameters`
-      *): ### `multiple \* parameters not allowed`
+      *) { ### `multiple \* parameters not allowed`
   pass
+}
 
-def i(*args, *): ### `multiple \* parameters not allowed`
+def i(*args, *) { ### `multiple \* parameters not allowed`
   pass
+}
 
 def j(*,      ### `bare \* must be followed by keyword-only parameters`
-      *args): ### `multiple \* parameters not allowed`
+      *args) { ### `multiple \* parameters not allowed`
   pass
+}
+def k(*, **kwargs) {} ### `bare \* must be followed by keyword-only parameters`
 
-def k(*, **kwargs): ### `bare \* must be followed by keyword-only parameters`
-  pass
+def l(*) {} ### `bare \* must be followed by keyword-only parameters`
 
-def l(*): ### `bare \* must be followed by keyword-only parameters`
-  pass
+def m(*args, a=1, **kwargs) {} # ok
 
-def m(*args, a=1, **kwargs): # ok
-  pass
-
-def n(*, a=1, **kwargs): # ok
-  pass
+def n(*, a=1, **kwargs) {} # ok
 
 ---
 # No arguments may follow **kwargs in a call.
-def f(*args, **kwargs):
-  pass
+def f(*args, **kwargs) {}
 
 f(**{}, 1) ### `argument may not follow \*\*kwargs`
 f(**{}, x=1) ### `argument may not follow \*\*kwargs`
@@ -274,8 +277,7 @@ f(**{}, **{}) ### `multiple \*\*kwargs not allowed`
 
 ---
 # Only keyword arguments may follow *args in a call.
-def f(*args, **kwargs):
-  pass
+def f(*args, **kwargs) {}
 
 f(*[], 1) ### `argument may not follow \*args`
 f(*[], a=1) # ok
@@ -285,10 +287,10 @@ f(*[], **{}) # ok
 ---
 # Parameter names must be unique.
 
-def f(a, b, a): pass ### "duplicate parameter: a"
-def g(args, b, *args): pass ### "duplicate parameter: args"
-def h(kwargs, a, **kwargs): pass ### "duplicate parameter: kwargs"
-def i(*x, **x): pass ### "duplicate parameter: x"
+def f(a, b, a) {} ### "duplicate parameter: a"
+def g(args, b, *args) {} ### "duplicate parameter: args"
+def h(kwargs, a, **kwargs) {} ### "duplicate parameter: kwargs"
+def i(*x, **x) {} ### "duplicate parameter: x"
 
 ---
 # No floating point
@@ -328,7 +330,7 @@ U = 1 # ok (legacy)
 
 ---
 # https://github.com/bazelbuild/starlark/starlark/issues/21
-def f(**kwargs): pass
+def f(**kwargs) {}
 f(a=1, a=1) ### `keyword argument a repeated`
 
 
@@ -340,10 +342,10 @@ print = U
 hello = 1
 print(hollo) ### `undefined: hollo \(did you mean hello\?\)`
 
-def f(abc):
+def f(abc) {
    print(abd) ### `undefined: abd \(did you mean abc\?\)`
    print(goodbye) ### `undefined: goodbye$`
-
+}
 ---
 load("module", "x") # ok
 x = 1 ### `cannot reassign local x`

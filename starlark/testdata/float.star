@@ -56,9 +56,9 @@ assert.eq(2.5 / 2.0, 1.25)
 assert.eq(2.5 / 2, 1.25)
 assert.eq(5 / 4.0, 1.25)
 assert.eq(5 / 4, 1.25)
-assert.fails(lambda: 1.0 / 0, "real division by zero")
-assert.fails(lambda: 1.0 / 0.0, "real division by zero")
-assert.fails(lambda: 1 / 0.0, "real division by zero")
+assert.fails(=> 1.0 / 0, "real division by zero")
+assert.fails(=> 1.0 / 0.0, "real division by zero")
+assert.fails(=> 1 / 0.0, "real division by zero")
 
 # floored division
 assert.eq(100.0 // 8.0, 12.0)
@@ -74,9 +74,9 @@ assert.eq(2.5 // 2, 1.0)
 assert.eq(5 // 4.0, 1.0)
 assert.eq(5 // 4, 1)
 assert.eq(type(5 // 4), "int")
-assert.fails(lambda: 1.0 // 0, "floored division by zero")
-assert.fails(lambda: 1.0 // 0.0, "floored division by zero")
-assert.fails(lambda: 1 // 0.0, "floored division by zero")
+assert.fails(=> 1.0 // 0, "floored division by zero")
+assert.fails(=> 1.0 // 0.0, "floored division by zero")
+assert.fails(=> 1 // 0.0, "floored division by zero")
 
 # remainder
 assert.eq(100.0 % 8.0, 4.0)
@@ -90,17 +90,17 @@ assert.eq(-98.0 % -8.0, -2.0)
 assert.eq(2.5 % 2.0, 0.5)
 assert.eq(2.5 % 2, 0.5)
 assert.eq(5 % 4.0, 1.0)
-assert.fails(lambda: 1.0 % 0, "float modulo by zero")
-assert.fails(lambda: 1.0 % 0.0, "float modulo by zero")
-assert.fails(lambda: 1 % 0.0, "float modulo by zero")
+assert.fails(=> 1.0 % 0, "float modulo by zero")
+assert.fails(=> 1.0 % 0.0, "float modulo by zero")
+assert.fails(=> 1 % 0.0, "float modulo by zero")
 
 # floats cannot be used as indices, even if integral
-assert.fails(lambda: "abc"[1.0], "want int")
-assert.fails(lambda: ["A", "B", "C"].insert(1.0, "D"), "want int")
+assert.fails(=> "abc"[1.0], "want int")
+assert.fails(=> ["A", "B", "C"].insert(1.0, "D"), "want int")
 
 # nan
 nan = float("NaN")
-def isnan(x): return x != x
+def isnan(x) { return x != x }
 assert.true(nan != nan)
 assert.true(not (nan == nan))
 
@@ -175,8 +175,8 @@ assert.eq(int(-99.9), -99)
 assert.eq(int(-100.0), -100)
 assert.eq(int(-100.1), -100)
 assert.eq(int(1e100), int("10000000000000000159028911097599180468360808563945281389781327557747838772170381060813469985856815104"))
-assert.fails(lambda: int(inf), "cannot convert.*infinity")
-assert.fails(lambda: int(nan), "cannot convert.*NaN")
+assert.fails(=> int(inf), "cannot convert.*infinity")
+assert.fails(=> int(nan), "cannot convert.*NaN")
 
 # float conversion
 assert.eq(float(), 0.0)
@@ -186,31 +186,36 @@ assert.eq(float(0), 0.0)
 assert.eq(float(1), 1.0)
 assert.eq(float(1.1), 1.1)
 assert.eq(float("1.1"), 1.1)
-assert.fails(lambda: float("1.1abc"), "invalid syntax")
-assert.fails(lambda: float("1e100.0"), "invalid syntax")
-assert.fails(lambda: float("1e1000"), "out of range")
-assert.fails(lambda: float(None), "want number or string")
+assert.fails(=> float("1.1abc"), "invalid syntax")
+assert.fails(=> float("1e100.0"), "invalid syntax")
+assert.fails(=> float("1e1000"), "out of range")
+assert.fails(=> float(None), "want number or string")
 assert.eq(float("-1.1"), -1.1)
 assert.eq(float("+1.1"), +1.1)
 assert.eq(float("+Inf"), inf)
 assert.eq(float("-Inf"), neginf)
 assert.true(isnan(float("NaN")))
-assert.fails(lambda: float("+NaN"), "invalid syntax")
-assert.fails(lambda: float("-NaN"), "invalid syntax")
+assert.fails(=> float("+NaN"), "invalid syntax")
+assert.fails(=> float("-NaN"), "invalid syntax")
 
 # hash
 # Check that equal float and int values have the same internal hash.
-def checkhash():
+def checkhash() {
   for a in [1.23e100, 1.23e10, 1.23e1, 1.23,
-            1, 4294967295, 8589934591, 9223372036854775807]:
-    for b in [a, -a, 1/a, -1/a]:
+            1, 4294967295, 8589934591, 9223372036854775807] {
+    for b in [a, -a, 1/a, -1/a] {
       f = float(b)
       i = int(b)
-      if f == i:
+      if f == i {
         fh = {f: None}
         ih = {i: None}
-        if fh != ih:
+        if fh != ih {
           assert.true(False, "{%v: None} != {%v: None}: hashes vary" % fh, ih)
+        }
+      }
+    }
+  }
+}
 checkhash()
 
 # string formatting
@@ -222,9 +227,9 @@ assert.eq("%g" % 123.45e67, "1.2345e+69")
 assert.eq("%e" % 123, "1.230000e+02")
 assert.eq("%f" % 123, "123.000000")
 assert.eq("%g" % 123, "123")
-assert.fails(lambda: "%e" % "123", "requires float, not str")
-assert.fails(lambda: "%f" % "123", "requires float, not str")
-assert.fails(lambda: "%g" % "123", "requires float, not str")
+assert.fails(=> "%e" % "123", "requires float, not str")
+assert.fails(=> "%f" % "123", "requires float, not str")
+assert.fails(=> "%g" % "123", "requires float, not str")
 
 i0 = 1
 f0 = 1.0
@@ -232,16 +237,16 @@ assert.eq(type(i0), "int")
 assert.eq(type(f0), "float")
 
 ops = {
-    '+': lambda x, y: x + y,
-    '-': lambda x, y: x - y,
-    '*': lambda x, y: x * y,
-    '/': lambda x, y: x / y,
-    '//': lambda x, y: x // y,
-    '%': lambda x, y: x % y,
+    '+': (x, y) => x + y,
+    '-': (x, y) => x - y,
+    '*': (x, y) => x * y,
+    '/': (x, y) => x / y,
+    '//': (x, y) => x // y,
+    '%': (x, y) => x % y,
 }
 
 # Check that if either argument is a float, so too is the result.
-def checktypes():
+def checktypes() {
   want = set("""
 int + int = int
 int + float = float
@@ -268,10 +273,14 @@ int % float = float
 float % int = float
 float % float = float
 """[1:].splitlines())
-  for opname in ("+", "-", "*", "/", "%"):
-    for x in [i0, f0]:
-      for y in [i0, f0]:
+  for opname in ("+", "-", "*", "/", "%") {
+    for x in [i0, f0] {
+      for y in [i0, f0] {
         op = ops[opname]
         got = "%s %s %s = %s" % (type(x), opname, type(y), type(op(x, y)))
         assert.contains(want, got)
+      }
+    }
+  }
+}
 checktypes()

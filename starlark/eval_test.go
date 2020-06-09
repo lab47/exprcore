@@ -113,19 +113,19 @@ func TestExecFile(t *testing.T) {
 	for _, file := range []string{
 		"testdata/assign.star",
 		"testdata/bool.star",
-		// "testdata/builtins.star",
-		// "testdata/control.star",
-		// "testdata/dict.star",
-		// "testdata/float.star",
-		// "testdata/function.star",
-		// "testdata/int.star",
-		// "testdata/list.star",
-		// "testdata/misc.star",
-		// "testdata/set.star",
-		// "testdata/string.star",
-		// "testdata/tuple.star",
-		// "testdata/recursion.star",
-		// "testdata/module.star",
+		"testdata/builtins.star",
+		"testdata/control.star",
+		"testdata/dict.star",
+		"testdata/float.star",
+		"testdata/function.star",
+		"testdata/int.star",
+		"testdata/list.star",
+		"testdata/misc.star",
+		"testdata/set.star",
+		"testdata/string.star",
+		"testdata/tuple.star",
+		"testdata/recursion.star",
+		"testdata/module.star",
 	} {
 		filename := filepath.Join(testdata, file)
 		for _, chunk := range chunkedfile.Read(filename, t) {
@@ -263,26 +263,36 @@ func (hf *hasfields) Binary(op syntax.Token, y starlark.Value, side starlark.Sid
 func TestParameterPassing(t *testing.T) {
 	const filename = "parameters.go"
 	const src = `
-def a():
+def a() {
 	return
-def b(a, b):
+}
+def b(a, b) {
 	return a, b
-def c(a, b=42):
+}
+def c(a, b=42) {
 	return a, b
-def d(*args):
+}
+def d(*args) {
 	return args
-def e(**kwargs):
+}
+def e(**kwargs) {
 	return kwargs
-def f(a, b=42, *args, **kwargs):
+}
+def f(a, b=42, *args, **kwargs) {
 	return a, b, args, kwargs
-def g(a, b=42, *args, c=123, **kwargs):
+}
+def g(a, b=42, *args, c=123, **kwargs) {
 	return a, b, args, c, kwargs
-def h(a, b=42, *, c=123, **kwargs):
+}
+def h(a, b=42, *, c=123, **kwargs) {
 	return a, b, c, kwargs
-def i(a, b=42, *, c, d=123, e, **kwargs):
+}
+def i(a, b=42, *, c, d=123, e, **kwargs) {
 	return a, b, c, d, e, kwargs
-def j(a, b=42, *args, c, d=123, e, **kwargs):
+}
+def j(a, b=42, *args, c, d=123, e, **kwargs) {
 	return a, b, args, c, d, e, kwargs
+}
 `
 
 	thread := new(starlark.Thread)
@@ -425,7 +435,7 @@ def j(a, b=42, *args, c, d=123, e, **kwargs):
 func TestPrint(t *testing.T) {
 	const src = `
 print("hello")
-def f(): print("hello", "world", sep=", ")
+def f() { print("hello", "world", sep=", ") }
 f()
 `
 	buf := new(bytes.Buffer)
@@ -438,9 +448,9 @@ f()
 		t.Fatal(err)
 	}
 	want := "foo.star:2:6: <toplevel>: hello\n" +
-		"foo.star:3:15: f: hello, world\n"
+		"foo.star:3:16: f: hello, world\n"
 	if got := buf.String(); got != want {
-		t.Errorf("output was %s, want %s", got, want)
+		t.Errorf("output was <<%s>>, want <<%s>>", got, want)
 	}
 }
 
@@ -487,6 +497,7 @@ func TestInt(t *testing.T) {
 }
 
 func backtrace(t *testing.T, err error) string {
+	t.Helper()
 	switch err := err.(type) {
 	case *starlark.EvalError:
 		return err.Backtrace()
@@ -502,10 +513,10 @@ func TestBacktrace(t *testing.T) {
 	// This test ensures continuity of the stack of active Starlark
 	// functions, including propagation through built-ins such as 'min'.
 	const src = `
-def f(x): return 1//x
-def g(x): f(x)
-def h(): return min([1, 2, 0], key=g)
-def i(): return h()
+def f(x) { return 1//x }
+def g(x) { f(x) }
+def h() { return min([1, 2, 0], key=g) }
+def i() { return h() }
 i()
 `
 	thread := new(starlark.Thread)
@@ -513,11 +524,11 @@ i()
 	// Compiled code currently has no column information.
 	const want = `Traceback (most recent call last):
   crash.star:6:2: in <toplevel>
-  crash.star:5:18: in i
-  crash.star:4:20: in h
+  crash.star:5:19: in i
+  crash.star:4:21: in h
   <builtin>: in min
-  crash.star:3:12: in g
-  crash.star:2:19: in f
+  crash.star:3:13: in g
+  crash.star:2:20: in f
 Error: floored division by zero`
 	if got := backtrace(t, err); got != want {
 		t.Errorf("error was %s, want %s", got, want)
@@ -529,17 +540,17 @@ Error: floored division by zero`
 	// This program fails in Starlark (f) if x==0,
 	// or in Go (string.join) if x is non-zero.
 	const src2 = `
-def f(): ''.join([1//i])
+def f() { ''.join([1//i]) }
 f()
 `
 	for i, want := range []string{
 		0: `Traceback (most recent call last):
   crash.star:3:2: in <toplevel>
-  crash.star:2:20: in f
+  crash.star:2:21: in f
 Error: floored division by zero`,
 		1: `Traceback (most recent call last):
   crash.star:3:2: in <toplevel>
-  crash.star:2:17: in f
+  crash.star:2:18: in f
   <builtin>: in join
 Error: join: in list, want string, got int`,
 	} {
@@ -710,9 +721,10 @@ func TestUnpackCustomUnpacker(t *testing.T) {
 
 func TestDocstring(t *testing.T) {
 	globals, _ := starlark.ExecFile(&starlark.Thread{}, "doc.star", `
-def somefunc():
+def somefunc() {
 	"somefunc doc"
 	return 0
+}
 `, nil)
 
 	if globals["somefunc"].(*starlark.Function).Doc() != "somefunc doc" {
@@ -753,8 +765,8 @@ func TestFrameLocals(t *testing.T) {
 		"builtin": starlark.NewBuiltin("builtin", builtin),
 	}
 	_, err := starlark.ExecFile(&starlark.Thread{}, "foo.star", `
-def f(x, y): builtin()
-def g(z): f(z, z*z)
+def f(x, y) { builtin() }
+def g(z) { f(z, z*z) }
 g(7)
 `, predeclared)
 	if err != nil {

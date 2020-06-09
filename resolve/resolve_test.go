@@ -51,7 +51,7 @@ func TestResolve(t *testing.T) {
 }
 
 func TestDefVarargsAndKwargsSet(t *testing.T) {
-	source := "def f(*args, **kwargs): pass\n"
+	source := "def f(*args, **kwargs) {}\n"
 	file, err := syntax.Parse("foo.star", source, 0)
 	if err != nil {
 		t.Fatal(err)

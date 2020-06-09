@@ -1136,6 +1136,10 @@ func (p *parser) parseComprehensionSuffix(lbrace Position, body Expr, endBrace T
 			pos := p.nextToken()
 			cond := p.parseTestNoCond(ec)
 			clauses = append(clauses, &IfClause{If: pos, Cond: cond})
+		} else if p.tok == SEMI {
+			// indicates a semi before a final brace
+			p.nextToken()
+			break
 		} else {
 			p.in.errorf(p.in.pos, "got %#v, want '%s', for, or if", p.tok, endBrace)
 		}

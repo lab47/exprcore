@@ -103,6 +103,8 @@ func TestExprParseTrees(t *testing.T) {
 			`(Comprehension Curly Body=(DictEntry Key=x Value=y) Clauses=((ForClause Vars=(ParenExpr X=(TupleExpr List=(x y))) X=z)))`},
 		{`{x: y for a in b if c}`,
 			`(Comprehension Curly Body=(DictEntry Key=x Value=y) Clauses=((ForClause Vars=a X=b) (IfClause Cond=c)))`},
+		{"{\nx: y for a in b if c\n}",
+			`(Comprehension Curly Body=(DictEntry Key=x Value=y) Clauses=((ForClause Vars=a X=b) (IfClause Cond=c)))`},
 		{`-1 + +2`,
 			`(BinaryExpr X=(UnaryExpr Op=- X=1) Op=+ Y=(UnaryExpr Op=+ X=2))`},
 		{`"foo" + "bar"`,
@@ -212,6 +214,8 @@ def h() {
 			`(ExprStmt X=(CallExpr Fn=f))`},
 		{"f();\n",
 			`(ExprStmt X=(CallExpr Fn=f))`},
+		{"1 + \\\n2\n1", `(ExprStmt X=(BinaryExpr X=1 Op=+ Y=2))`},
+		{"three = 1 + \\\n2\nf(1 + \\\n2, three)", `(AssignStmt Op== LHS=three RHS=(BinaryExpr X=1 Op=+ Y=2))`},
 	} {
 		f, err := syntax.Parse("foo.star", test.input, 0)
 		if err != nil {

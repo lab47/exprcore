@@ -23,18 +23,19 @@ assert.eq(minint32, -2147483648)
 
 
 # truth
-def truth():
+def truth() {
   assert.true(not 0)
-  for m in [1, maxint32]: # Test small/big ranges
+  for m in [1, maxint32] { # Test small/big ranges
     assert.true(123*m)
     assert.true(-1*m)
-
+  }
+}
 truth()
 
 # floored division
 # (For real division, see float.star.)
-def division():
-  for m in [1, maxint32]: # Test small/big ranges
+def division() {
+  for m in [1, maxint32] { # Test small/big ranges
     assert.eq((100*m) // (7*m), 14)
     assert.eq((100*m) // (-7*m), -15)
     assert.eq((-100*m) // (7*m), -15) # NB: different from Go/Java
@@ -43,12 +44,14 @@ def division():
     assert.eq((98*m) // (-7*m), -14)
     assert.eq((-98*m) // (7*m), -14)
     assert.eq((-98*m) // (-7*m), 14)
+  }
+}
 
 division()
 
 # remainder
-def remainder():
-  for m in [1, maxint32]: # Test small/big ranges
+def remainder() {
+  for m in [1, maxint32] { # Test small/big ranges
     assert.eq((100*m) % (7*m), 2*m)
     assert.eq((100*m) % (-7*m), -5*m) # NB: different from Go/Java
     assert.eq((-100*m) % (7*m), 5*m) # NB: different from Go/Java
@@ -57,11 +60,12 @@ def remainder():
     assert.eq((98*m) % (-7*m), 0)
     assert.eq((-98*m) % (7*m), 0)
     assert.eq((-98*m) % (-7*m), 0)
-
+  }
+}
 remainder()
 
 # compound assignment
-def compound():
+def compound() {
   x = 1
   x += 1
   assert.eq(x, 2)
@@ -87,7 +91,7 @@ def compound():
   assert.eq(x, 4)
   x >>=2
   assert.eq(x, 1)
-
+}
 compound()
 
 # int conversion
@@ -99,8 +103,8 @@ assert.eq(int(False), 0)
 assert.eq(int(True), 1)
 assert.eq(int(3), 3)
 assert.eq(int(3.1), 3)
-assert.fails(lambda: int(3, base=10), "non-string with explicit base")
-assert.fails(lambda: int(True, 10), "non-string with explicit base")
+assert.fails(=> int(3, base=10), "non-string with explicit base")
+assert.fails(=> int(True, 10), "non-string with explicit base")
 # int from string, base implicitly 10
 assert.eq(int("100000000000000000000"), 10000000000 * 10000000000)
 assert.eq(int("-100000000000000000000"), -10000000000 * 10000000000)
@@ -108,10 +112,10 @@ assert.eq(int("123"), 123)
 assert.eq(int("-123"), -123)
 assert.eq(int("0123"), 123) # not octal
 assert.eq(int("-0123"), -123)
-assert.fails(lambda: int("0x12"), "invalid literal with base 10")
-assert.fails(lambda: int("-0x12"), "invalid literal with base 10")
-assert.fails(lambda: int("0o123"), "invalid literal.*base 10")
-assert.fails(lambda: int("-0o123"), "invalid literal.*base 10")
+assert.fails(=> int("0x12"), "invalid literal with base 10")
+assert.fails(=> int("-0x12"), "invalid literal with base 10")
+assert.fails(=> int("0o123"), "invalid literal.*base 10")
+assert.fails(=> int("-0o123"), "invalid literal.*base 10")
 # int from string, explicit base
 assert.eq(int("0"), 0)
 assert.eq(int("00"), 0)
@@ -155,11 +159,11 @@ assert.eq(int("111111101", 2), 509)
 assert.eq(int("0b0101", 0), 5)
 assert.eq(int("0b00000", 0), 0)
 assert.eq(1111111111111111 * 1111111111111111, 1234567901234567654320987654321)
-assert.fails(lambda: int("0x123", 8), "invalid literal.*base 8")
-assert.fails(lambda: int("-0x123", 8), "invalid literal.*base 8")
-assert.fails(lambda: int("0o123", 16), "invalid literal.*base 16")
-assert.fails(lambda: int("-0o123", 16), "invalid literal.*base 16")
-assert.fails(lambda: int("0x110", 2), "invalid literal.*base 2")
+assert.fails(=> int("0x123", 8), "invalid literal.*base 8")
+assert.fails(=> int("-0x123", 8), "invalid literal.*base 8")
+assert.fails(=> int("0o123", 16), "invalid literal.*base 16")
+assert.fails(=> int("-0o123", 16), "invalid literal.*base 16")
+assert.fails(=> int("0x110", 2), "invalid literal.*base 2")
 # int from string, auto detect base
 assert.eq(int("123", 0), 123)
 assert.eq(int("+123", 0), +123)
@@ -170,15 +174,15 @@ assert.eq(int("-0x12", 0), -18)
 assert.eq(int("0o123", 0), 83)
 assert.eq(int("+0o123", 0), +83)
 assert.eq(int("-0o123", 0), -83)
-assert.fails(lambda: int("0123", 0), "invalid literal.*base 0") # valid in Python 2.7
-assert.fails(lambda: int("-0123", 0), "invalid literal.*base 0")
+assert.fails(=> int("0123", 0), "invalid literal.*base 0") # valid in Python 2.7
+assert.fails(=> int("-0123", 0), "invalid literal.*base 0")
 # github.com/google/starlark-go/issues/108
-assert.fails(lambda: int("0Oxa", 8), "invalid literal with base 8: 0Oxa")
+assert.fails(=> int("0Oxa", 8), "invalid literal with base 8: 0Oxa")
 # follow-on bugs to issue 108
-assert.fails(lambda: int("--4"), "invalid literal with base 10: --4")
-assert.fails(lambda: int("++4"), "invalid literal with base 10: \\+\\+4")
-assert.fails(lambda: int("+-4"), "invalid literal with base 10: \\+-4")
-assert.fails(lambda: int("0x-4", 16), "invalid literal with base 16: 0x-4")
+assert.fails(=> int("--4"), "invalid literal with base 10: --4")
+assert.fails(=> int("++4"), "invalid literal with base 10: \\+\\+4")
+assert.fails(=> int("+-4"), "invalid literal with base 10: \\+-4")
+assert.fails(=> int("0x-4", 16), "invalid literal with base 16: 0x-4")
 
 # bitwise union (int|int), intersection (int&int), XOR (int^int), unary not (~int),
 # left shift (int<<int), and right shift (int>>int).
@@ -196,13 +200,13 @@ assert.eq(~-2, 1)
 assert.eq(~0, -1)
 assert.eq(1 << 2, 4)
 assert.eq(2 >> 1, 1)
-assert.fails(lambda: 2 << -1, "negative shift count")
-assert.fails(lambda: 1 << 512, "shift count too large")
+assert.fails(=> 2 << -1, "negative shift count")
+assert.fails(=> 1 << 512, "shift count too large")
 
 # comparisons
 # TODO(adonovan): test: < > == != etc
-def comparisons():
-  for m in [1, maxint32/2, maxint32]: # Test small/big ranges
+def comparisons() {
+  for m in [1, maxint32/2, maxint32] { # Test small/big ranges
     assert.lt(-2*m, -1*m)
     assert.lt(-1*m, 0*m)
     assert.lt(0*m, 1*m)
@@ -215,6 +219,8 @@ def comparisons():
     assert.true(0*m > -1*m)
     assert.true(-1*m >= -1*m)
     assert.true(-1*m > -2*m)
+  }
+}
 
 comparisons()
 
@@ -242,4 +248,4 @@ assert.eq(' '.join(["%x" % x for x in nums]), "-5f -1 0 1 5f")
 assert.eq(' '.join(["%X" % x for x in nums]), "-5F -1 0 1 5F")
 assert.eq("%o %x %d" % (123, 123, 123), "173 7b 123")
 assert.eq("%o %x %d" % (123.1, 123.1, 123.1), "173 7b 123") # non-int operands are acceptable
-assert.fails(lambda: "%d" % True, "cannot convert bool to int")
+assert.fails(=> "%d" % True, "cannot convert bool to int")
