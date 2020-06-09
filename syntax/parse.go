@@ -982,6 +982,15 @@ func (p *parser) parsePrimary(ec exprContext) Expr {
 			Op:    tok,
 			X:     x,
 		}
+	case AT:
+		pos := p.nextToken()
+		ident := p.parseIdent()
+
+		return &AtExpr{
+			OpPos:   pos,
+			Name:    ident.Name,
+			NamePos: ident.NamePos,
+		}
 	}
 	p.in.errorf(p.in.pos, "got %#v, want primary expression", p.tok)
 	panic("unreachable")

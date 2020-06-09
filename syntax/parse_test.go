@@ -216,6 +216,7 @@ def h() {
 			`(ExprStmt X=(CallExpr Fn=f))`},
 		{"1 + \\\n2\n1", `(ExprStmt X=(BinaryExpr X=1 Op=+ Y=2))`},
 		{"three = 1 + \\\n2\nf(1 + \\\n2, three)", `(AssignStmt Op== LHS=three RHS=(BinaryExpr X=1 Op=+ Y=2))`},
+		{"@a", `(ExprStmt X=(AtExpr Name=a))`},
 	} {
 		f, err := syntax.Parse("foo.star", test.input, 0)
 		if err != nil {

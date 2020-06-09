@@ -234,6 +234,7 @@ func (*ParenExpr) expr()     {}
 func (*SliceExpr) expr()     {}
 func (*TupleExpr) expr()     {}
 func (*UnaryExpr) expr()     {}
+func (*AtExpr) expr()        {}
 
 // An Ident represents an identifier.
 type Ident struct {
@@ -483,6 +484,18 @@ func (x *UnaryExpr) Span() (start, end Position) {
 		end = x.OpPos.add("*")
 	}
 	return x.OpPos, end
+}
+
+// A AtExpr represents @ ident
+type AtExpr struct {
+	commentsRef
+	OpPos   Position
+	Name    string
+	NamePos Position
+}
+
+func (x *AtExpr) Span() (start, end Position) {
+	return x.OpPos, x.NamePos.add(x.Name)
 }
 
 // A BinaryExpr represents a binary expression: X Op Y.

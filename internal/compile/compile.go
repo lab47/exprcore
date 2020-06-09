@@ -132,6 +132,7 @@ const (
 	LOCAL       //                 - LOCAL<local>        value
 	FREE        //                 - FREE<freevar>       cell
 	GLOBAL      //                 - GLOBAL<global>      value
+	AT          //                 - AT<name>            value
 	PREDECLARED //                 - PREDECLARED<name>   value
 	UNIVERSAL   //                 - UNIVERSAL<name>     value
 	ATTR        //                 x ATTR<name>          y           y = x.name
@@ -153,6 +154,7 @@ const (
 var opcodeNames = [...]string{
 	AMP:         "amp",
 	APPEND:      "append",
+	AT:          "at",
 	ATTR:        "attr",
 	CALL:        "call",
 	CALL_KW:     "call_kw ",
@@ -226,6 +228,7 @@ const variableStackEffect = 0x7f
 var stackEffect = [...]int8{
 	AMP:         -1,
 	APPEND:      -2,
+	AT:          +1,
 	ATTR:        0,
 	CALL:        variableStackEffect,
 	CALL_KW:     variableStackEffect,
@@ -869,7 +872,7 @@ func PrintOp(fn *Funcode, pc uint32, op Opcode, arg uint32) {
 		comment = fn.Locals[arg].Name
 	case SETGLOBAL, GLOBAL:
 		comment = fn.Prog.Globals[arg].Name
-	case ATTR, SETFIELD, PREDECLARED, UNIVERSAL:
+	case ATTR, SETFIELD, PREDECLARED, UNIVERSAL, AT:
 		comment = fn.Prog.Names[arg]
 	case FREE:
 		comment = fn.Freevars[arg].Name
@@ -1433,6 +1436,10 @@ func (fcomp *fcomp) expr(e syntax.Expr) {
 
 	case *syntax.LambdaExpr:
 		fcomp.function(e.Function.(*resolve.Function))
+
+	case *syntax.AtExpr:
+		fcomp.setPos(e.OpPos)
+		fcomp.emit1(AT, fcomp.pcomp.nameIndex(e.Name))
 
 	default:
 		start, _ := e.Span()

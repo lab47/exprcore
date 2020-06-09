@@ -577,6 +577,21 @@ loop:
 			stack[sp] = Universe[f.Prog.Names[arg]]
 			sp++
 
+		case compile.AT:
+			name := f.Prog.Names[arg]
+
+			val, err := getIndex(fn.recv, String(name))
+			if err != nil {
+				break loop
+			}
+
+			if val == nil {
+				val = None
+			}
+
+			stack[sp] = val
+			sp++
+
 		default:
 			err = fmt.Errorf("unimplemented: %s", op)
 			break loop

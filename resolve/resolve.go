@@ -637,6 +637,8 @@ func (r *resolver) expr(e syntax.Expr) {
 		if !AllowFloat && e.Token == syntax.FLOAT {
 			r.errorf(e.TokenPos, doesnt+"support floating point")
 		}
+	case *syntax.AtExpr:
+		// ok
 
 	case *syntax.ListExpr:
 		for _, x := range e.List {

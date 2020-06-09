@@ -126,6 +126,7 @@ func TestExecFile(t *testing.T) {
 		"testdata/tuple.star",
 		"testdata/recursion.star",
 		"testdata/module.star",
+		"testdata/exprcore_eval.star",
 	} {
 		filename := filepath.Join(testdata, file)
 		for _, chunk := range chunkedfile.Read(filename, t) {

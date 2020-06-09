@@ -79,6 +79,7 @@ const (
 	GTGT_EQ       // >>=
 	STARSTAR      // **
 	ARROW         // =>
+	AT            // @
 
 	// Keywords
 	AND
@@ -165,6 +166,7 @@ var tokenNames = [...]string{
 	GTGT_EQ:       ">>=",
 	STARSTAR:      "**",
 	ARROW:         "=>",
+	AT:            "@",
 	AND:           "and",
 	BREAK:         "break",
 	CONTINUE:      "continue",
@@ -818,7 +820,7 @@ start:
 		}
 		panic("unreachable")
 
-	case ':', ';', '~': // single-char tokens (except comma)
+	case ':', ';', '~', '@': // single-char tokens (except comma)
 		sc.readRune()
 		switch c {
 		case ':':
@@ -827,6 +829,8 @@ start:
 			return SEMI
 		case '~':
 			return TILDE
+		case '@':
+			return AT
 		}
 		panic("unreachable")
 

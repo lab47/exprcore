@@ -133,6 +133,10 @@ var (
 	setMethods = map[string]*Builtin{
 		"union": NewBuiltin("union", set_union),
 	}
+
+	funcMethods = map[string]*Builtin{
+		"bind": NewBuiltin("bind", func_bind),
+	}
 )
 
 func builtinAttr(recv Value, name string, methods map[string]*Builtin) (Value, error) {
@@ -2101,4 +2105,19 @@ func updateDict(dict *Dict, updates Tuple, kwargs []Tuple) error {
 // where name is b.Name() and msg is a string or error.
 func nameErr(b *Builtin, msg interface{}) error {
 	return fmt.Errorf("%s: %v", b.Name(), msg)
+}
+
+func func_bind(_ *Thread, b *Builtin, args Tuple, kwargs []Tuple) (Value, error) {
+	var val Value
+	if err := UnpackPositionalArgs(b.Name(), args, kwargs, 1, &val); err != nil {
+		return nil, err
+	}
+
+	fn := b.Receiver().(*Function)
+
+	var cp Function
+	cp = *fn
+	cp.recv = val
+
+	return &cp, nil
 }
