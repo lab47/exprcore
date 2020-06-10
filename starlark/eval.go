@@ -437,7 +437,7 @@ func makeToplevelFunction(prog *compile.Program, predeclared StringDict) *Functi
 		constants[i] = v
 	}
 
-	return &Function{
+	fn := &Function{
 		funcode: prog.Toplevel,
 		module: &module{
 			program:     prog,
@@ -446,6 +446,8 @@ func makeToplevelFunction(prog *compile.Program, predeclared StringDict) *Functi
 			constants:   constants,
 		},
 	}
+	fn.setParent("parent", funcPrototype)
+	return fn
 }
 
 // Eval parses, resolves, and evaluates an expression within the
@@ -928,7 +930,7 @@ func Binary(op syntax.Token, x, y Value) (Value, error) {
 			}
 		case *Set: // intersection
 			if y, ok := y.(*Set); ok {
-				set := new(Set)
+				set := NewSet(0)
 				if x.Len() > y.Len() {
 					x, y = y, x // opt: range over smaller set
 				}
@@ -950,7 +952,7 @@ func Binary(op syntax.Token, x, y Value) (Value, error) {
 			}
 		case *Set: // symmetric difference
 			if y, ok := y.(*Set); ok {
-				set := new(Set)
+				set := NewSet(0)
 				for _, xelem := range x.elems() {
 					if found, _ := y.Has(xelem); !found {
 						set.Insert(xelem)
@@ -1258,7 +1260,7 @@ func setArgs(locals []Value, fn *Function, args Tuple, kwargs []Tuple) error {
 	var kwdict *Dict
 	if fn.HasKwargs() {
 		nparams--
-		kwdict = new(Dict)
+		kwdict = NewDict(0)
 		locals[nparams] = kwdict
 	}
 	if fn.HasVarargs() {

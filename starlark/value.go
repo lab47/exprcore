@@ -335,6 +335,10 @@ type HasSetField interface {
 	SetField(name string, val Value) error
 }
 
+type HasBindReceiver interface {
+	BindReceiver(recv Value) *Builtin
+}
+
 // A NoSuchAttrError may be returned by an implementation of
 // HasAttrs.Attr or HasSetField.SetField to indicate that no such field
 // exists. In that case the runtime may augment the error message to
@@ -489,8 +493,8 @@ func (s String) Slice(start, end, step int) Value {
 	return String(str)
 }
 
-func (s String) Attr(name string) (Value, error) { return builtinAttr(s, name, stringMethods) }
-func (s String) AttrNames() []string             { return builtinAttrNames(stringMethods) }
+func (s String) Attr(name string) (Value, error) { return stringPrototype.AttrOf(name, s) }
+func (s String) AttrNames() []string             { return stringPrototype.AttrNames() }
 
 func (x String) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, error) {
 	y := y_.(String)
@@ -570,6 +574,7 @@ func (*stringIterator) Done() {}
 // A Function is a function defined by a Starlark def statement or lambda expression.
 // The initialization behavior of a Starlark module is also represented by a Function.
 type Function struct {
+	Prototype
 	funcode  *compile.Funcode
 	module   *module
 	defaults Tuple
@@ -610,12 +615,10 @@ func (fn *Function) Truth() Bool           { return true }
 // variables so far defined in the function's module.
 func (fn *Function) Globals() StringDict { return fn.module.makeGlobalDict() }
 
-func (fn *Function) Position() syntax.Position { return fn.funcode.Pos }
-func (fn *Function) NumParams() int            { return fn.funcode.NumParams }
-func (fn *Function) NumKwonlyParams() int      { return fn.funcode.NumKwonlyParams }
-
-func (fn *Function) Attr(name string) (Value, error) { return builtinAttr(fn, name, funcMethods) }
-func (fn *Function) AttrNames() []string             { return builtinAttrNames(funcMethods) }
+func (fn *Function) Position() syntax.Position       { return fn.funcode.Pos }
+func (fn *Function) NumParams() int                  { return fn.funcode.NumParams }
+func (fn *Function) NumKwonlyParams() int            { return fn.funcode.NumKwonlyParams }
+func (fn *Function) Attr(name string) (Value, error) { return fn.AttrOf(name, fn) }
 
 // Param returns the name and position of the ith parameter,
 // where 0 <= i < NumParams().
@@ -633,6 +636,7 @@ func (fn *Function) HasKwargs() bool  { return fn.funcode.HasKwargs }
 
 // A Builtin is a function implemented in Go.
 type Builtin struct {
+	Prototype
 	name string
 	fn   func(thread *Thread, fn *Builtin, args Tuple, kwargs []Tuple) (Value, error)
 	recv Value // for bound methods (e.g. "".startswith)
@@ -657,12 +661,15 @@ func (b *Builtin) Type() string    { return "builtin_function_or_method" }
 func (b *Builtin) CallInternal(thread *Thread, args Tuple, kwargs []Tuple) (Value, error) {
 	return b.fn(thread, b, args, kwargs)
 }
-func (b *Builtin) Truth() Bool { return true }
+func (b *Builtin) Truth() Bool                     { return true }
+func (b *Builtin) Attr(name string) (Value, error) { return b.AttrOf(name, b) }
 
 // NewBuiltin returns a new 'builtin_function_or_method' value with the specified name
 // and implementation.  It compares unequal with all other values.
 func NewBuiltin(name string, fn func(thread *Thread, fn *Builtin, args Tuple, kwargs []Tuple) (Value, error)) *Builtin {
-	return &Builtin{name: name, fn: fn}
+	b := &Builtin{name: name, fn: fn}
+	b.setParent("parent", builtinPrototype)
+	return b
 }
 
 // BindReceiver returns a new Builtin value representing a method
@@ -687,6 +694,7 @@ func (b *Builtin) BindReceiver(recv Value) *Builtin {
 // If you know the exact final number of entries,
 // it is more efficient to call NewDict.
 type Dict struct {
+	Prototype
 	ht hashtable
 }
 
@@ -694,7 +702,10 @@ type Dict struct {
 // at least size insertions before rehashing.
 func NewDict(size int) *Dict {
 	dict := new(Dict)
-	dict.ht.init(size)
+	if size > 0 {
+		dict.ht.init(size)
+	}
+	dict.setParent("parent", dictPrototype)
 	return dict
 }
 
@@ -711,9 +722,7 @@ func (d *Dict) Type() string                                    { return "dict" 
 func (d *Dict) Freeze()                                         { d.ht.freeze() }
 func (d *Dict) Truth() Bool                                     { return d.Len() > 0 }
 func (d *Dict) Hash() (uint32, error)                           { return 0, fmt.Errorf("unhashable type: dict") }
-
-func (d *Dict) Attr(name string) (Value, error) { return builtinAttr(d, name, dictMethods) }
-func (d *Dict) AttrNames() []string             { return builtinAttrNames(dictMethods) }
+func (d *Dict) Attr(name string) (Value, error)                 { return d.AttrOf(name, d) }
 
 func (x *Dict) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, error) {
 	y := y_.(*Dict)
@@ -749,6 +758,7 @@ func dictsEqual(x, y *Dict, depth int) (bool, error) {
 
 // A *List represents a Starlark list value.
 type List struct {
+	Prototype
 	elems     []Value
 	frozen    bool
 	itercount uint32 // number of active iterators (ignored if frozen)
@@ -756,7 +766,13 @@ type List struct {
 
 // NewList returns a list containing the specified elements.
 // Callers should not subsequently modify elems.
-func NewList(elems []Value) *List { return &List{elems: elems} }
+func NewList(elems []Value) *List {
+	l := &List{
+		elems: elems,
+	}
+	l.setParent("parent", listPrototype)
+	return l
+}
 
 func (l *List) Freeze() {
 	if !l.frozen {
@@ -800,8 +816,9 @@ func (l *List) Slice(start, end, step int) Value {
 	return NewList(list)
 }
 
-func (l *List) Attr(name string) (Value, error) { return builtinAttr(l, name, listMethods) }
-func (l *List) AttrNames() []string             { return builtinAttrNames(listMethods) }
+func (l *List) Attr(name string) (Value, error) {
+	return l.AttrOf(name, l)
+}
 
 func (l *List) Iterate() Iterator {
 	if !l.frozen {
@@ -955,6 +972,7 @@ func (it *tupleIterator) Done() {}
 // If you know the exact final number of elements,
 // it is more efficient to call NewSet.
 type Set struct {
+	Prototype
 	ht hashtable // values are all None
 }
 
@@ -962,7 +980,10 @@ type Set struct {
 // at least size insertions before rehashing.
 func NewSet(size int) *Set {
 	set := new(Set)
-	set.ht.init(size)
+	if size > 0 {
+		set.ht.init(size)
+	}
+	set.setParent("parent", setPrototype)
 	return set
 }
 
@@ -978,9 +999,7 @@ func (s *Set) elems() []Value                         { return s.ht.keys() }
 func (s *Set) Freeze()                                { s.ht.freeze() }
 func (s *Set) Hash() (uint32, error)                  { return 0, fmt.Errorf("unhashable type: set") }
 func (s *Set) Truth() Bool                            { return s.Len() > 0 }
-
-func (s *Set) Attr(name string) (Value, error) { return builtinAttr(s, name, setMethods) }
-func (s *Set) AttrNames() []string             { return builtinAttrNames(setMethods) }
+func (s *Set) Attr(name string) (Value, error)        { return s.AttrOf(name, s) }
 
 func (x *Set) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, error) {
 	y := y_.(*Set)
@@ -1010,6 +1029,7 @@ func setsEqual(x, y *Set, depth int) (bool, error) {
 
 func (s *Set) Union(iter Iterator) (Value, error) {
 	set := new(Set)
+	set.setParent("parent", s.parents[0].value)
 	for _, elem := range s.elems() {
 		set.Insert(elem) // can't fail
 	}

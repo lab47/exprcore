@@ -386,7 +386,7 @@ loop:
 			}
 
 		case compile.MAKEDICT:
-			stack[sp] = new(Dict)
+			stack[sp] = NewDict(0)
 			sp++
 
 		case compile.SETDICT, compile.SETDICTUNIQ:
@@ -482,12 +482,14 @@ loop:
 			n := len(tuple) - len(funcode.Freevars)
 			defaults := tuple[:n:n]
 			freevars := tuple[n:]
-			stack[sp-1] = &Function{
+			fn := &Function{
 				funcode:  funcode,
 				module:   fn.module,
 				defaults: defaults,
 				freevars: freevars,
 			}
+			fn.setParent("parent", funcPrototype)
+			stack[sp-1] = fn
 
 		case compile.LOAD:
 			n := int(arg)

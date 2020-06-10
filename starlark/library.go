@@ -84,6 +84,8 @@ var (
 		"values":     NewBuiltin("values", dict_values),
 	}
 
+	dictPrototype = FromBuiltins(Root, dictMethods)
+
 	listMethods = map[string]*Builtin{
 		"append": NewBuiltin("append", list_append),
 		"clear":  NewBuiltin("clear", list_clear),
@@ -93,6 +95,8 @@ var (
 		"pop":    NewBuiltin("pop", list_pop),
 		"remove": NewBuiltin("remove", list_remove),
 	}
+
+	listPrototype = FromBuiltins(Root, listMethods)
 
 	stringMethods = map[string]*Builtin{
 		"capitalize":     NewBuiltin("capitalize", string_capitalize),
@@ -130,13 +134,20 @@ var (
 		"upper":          NewBuiltin("upper", string_upper),
 	}
 
+	stringPrototype = FromBuiltins(Root, stringMethods)
+
 	setMethods = map[string]*Builtin{
 		"union": NewBuiltin("union", set_union),
 	}
 
+	setPrototype = FromBuiltins(Root, setMethods)
+
 	funcMethods = map[string]*Builtin{
 		"bind": NewBuiltin("bind", func_bind),
 	}
+
+	funcPrototype    = FromBuiltins(Root, funcMethods)
+	builtinPrototype = FromBuiltins(Root, nil)
 )
 
 func builtinAttr(recv Value, name string, methods map[string]*Builtin) (Value, error) {
@@ -227,7 +238,7 @@ func dict(thread *Thread, _ *Builtin, args Tuple, kwargs []Tuple) (Value, error)
 	if len(args) > 1 {
 		return nil, fmt.Errorf("dict: got %d arguments, want at most 1", len(args))
 	}
-	dict := new(Dict)
+	dict := NewDict(0)
 	if err := updateDict(dict, args, kwargs); err != nil {
 		return nil, fmt.Errorf("dict: %v", err)
 	}
@@ -873,7 +884,7 @@ func set(thread *Thread, b *Builtin, args Tuple, kwargs []Tuple) (Value, error) 
 	if err := UnpackPositionalArgs("set", args, kwargs, 0, &iterable); err != nil {
 		return nil, err
 	}
-	set := new(Set)
+	set := NewSet(0)
 	if iterable != nil {
 		iter := iterable.Iterate()
 		defer iter.Done()
