@@ -658,6 +658,12 @@ func (r *resolver) expr(e syntax.Expr) {
 		r.expr(e.Key)
 		r.expr(e.Value)
 
+	case *syntax.ProtoExpr:
+		for _, stmt := range e.List {
+			stmt := stmt.(*syntax.ProtoEntry)
+			r.stmt(stmt.Value)
+		}
+
 	case *syntax.SliceExpr:
 		r.expr(e.X)
 		if e.Lo != nil {

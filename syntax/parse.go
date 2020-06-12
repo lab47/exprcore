@@ -899,6 +899,9 @@ func (p *parser) parsePrimary(ec exprContext) Expr {
 	case LBRACE:
 		return p.parseDict(ec)
 
+	case PERCENT_BRACE:
+		return p.parseProto(ec)
+
 	case STARSTAR:
 		if !ec.allowParams {
 			p.in.errorf(p.in.pos, "got %#v, want primary expression", p.tok)
@@ -1079,6 +1082,44 @@ func (p *parser) parseList() Expr {
 
 	rbrack := p.consume(RBRACK)
 	return &ListExpr{Lbrack: lbrack, List: exprs, Rbrack: rbrack}
+}
+
+// proto = '%{' '}'
+//       | '{' proto_entry_list '}'
+func (p *parser) parseProto(ec exprContext) Expr {
+	lbrace := p.nextToken()
+	if p.tok == RBRACE {
+		// empty dict
+		rbrace := p.nextToken()
+		return &ProtoExpr{Lbrace: lbrace, Rbrace: rbrace}
+	}
+
+	x := p.parseProtoEntry(ec)
+
+	entries := []Stmt{x}
+	for p.tok == SEMI {
+		p.nextToken()
+		if p.tok == RBRACE {
+			break
+		}
+		entries = append(entries, p.parseProtoEntry(ec))
+	}
+
+	rbrace := p.consume(RBRACE)
+	return &ProtoExpr{Lbrace: lbrace, List: entries, Rbrace: rbrace}
+}
+
+// dict_entry = test ':' test
+func (p *parser) parseProtoEntry(ec exprContext) *ProtoEntry {
+	if p.tok == DEF {
+		de := p.parseDefStmt().(*DefStmt)
+		return &ProtoEntry{Key: de.Name, Colon: de.Name.NamePos, Value: de}
+	}
+
+	k := p.parseIdent()
+	colon := p.consume(COLON)
+	v := p.parseTest(ec)
+	return &ProtoEntry{Key: k, Colon: colon, Value: &ExprStmt{X: v}}
 }
 
 // dict = '{' '}'

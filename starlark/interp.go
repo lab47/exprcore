@@ -389,6 +389,10 @@ loop:
 			stack[sp] = NewDict(0)
 			sp++
 
+		case compile.MAKEPROTO:
+			stack[sp] = FromKeywords(Root, nil)
+			sp++
+
 		case compile.SETDICT, compile.SETDICTUNIQ:
 			dict := stack[sp-3].(*Dict)
 			k := stack[sp-2]
@@ -402,6 +406,19 @@ loop:
 			if op == compile.SETDICTUNIQ && dict.Len() == oldlen {
 				err = fmt.Errorf("duplicate key: %v", k)
 				break loop
+			}
+
+		case compile.SETPROTOKEY:
+			proto := stack[sp-3].(*Prototype)
+			k := stack[sp-2]
+			v := stack[sp-1]
+			sp -= 3
+
+			fmt.Printf("set-proto: %v (%s: %v)\n", proto, k, v)
+
+			err2 := proto.SetField(string(k.(String)), v)
+			if err2 != nil {
+				err = err2
 			}
 
 		case compile.APPEND:

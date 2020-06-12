@@ -133,6 +133,10 @@ func TestExprParseTrees(t *testing.T) {
 			`(BinaryExpr X=a Op=and Y=(UnaryExpr Op=not X=b))`},
 		{`[e for x in y if cond1 if cond2]`,
 			`(Comprehension Body=e Clauses=((ForClause Vars=x X=y) (IfClause Cond=cond1) (IfClause Cond=cond2)))`}, // github.com/google/skylark/issues/53
+		{"%{ age: 12; bar: 13 }",
+			"(ProtoExpr List=((ProtoEntry Key=age Value=(ExprStmt X=12)) (ProtoEntry Key=bar Value=(ExprStmt X=13))))"},
+		{"%{ age: 12; def bar() { return 13 } }",
+			"(ProtoExpr List=((ProtoEntry Key=age Value=(ExprStmt X=12)) (ProtoEntry Key=bar Value=(DefStmt Name=bar Body=((ReturnStmt Result=13))))))"},
 	} {
 		e, err := syntax.ParseExpr("foo.star", test.input, 0)
 		var got string
@@ -217,6 +221,8 @@ def h() {
 		{"1 + \\\n2\n1", `(ExprStmt X=(BinaryExpr X=1 Op=+ Y=2))`},
 		{"three = 1 + \\\n2\nf(1 + \\\n2, three)", `(AssignStmt Op== LHS=three RHS=(BinaryExpr X=1 Op=+ Y=2))`},
 		{"@a", `(ExprStmt X=(AtExpr Name=a))`},
+		{"person = %{\n  age: 12\n  def bar() {\n     return 13\n     }\n   }\n",
+			"(AssignStmt Op== LHS=person RHS=(ProtoExpr List=((ProtoEntry Key=age Value=(ExprStmt X=12)) (ProtoEntry Key=bar Value=(DefStmt Name=bar Body=((ReturnStmt Result=13)))))))"},
 	} {
 		f, err := syntax.Parse("foo.star", test.input, 0)
 		if err != nil {

@@ -256,6 +256,7 @@ pass`, "pass ; pass ; EOF"}, // consecutive newlines are consolidated
 			`{ x : y for a in b if c ; } ; EOF`},
 		{"1 + 2\n1", `1 + 2 ; 1 ; EOF`},
 		{"1 + \\\n2\n1", `1 + 2 ; 1 ; EOF`},
+		{"%{ age = 12, bar = 13 }", "%{ age = 12 , bar = 13 } ; EOF"},
 	} {
 		got, err := scan(test.input)
 		if err != nil {

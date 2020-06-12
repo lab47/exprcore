@@ -77,9 +77,10 @@ const (
 	CIRCUMFLEX_EQ // ^=
 	LTLT_EQ       // <<=
 	GTGT_EQ       // >>=
-	STARSTAR      // **
 	ARROW         // =>
 	AT            // @
+	PERCENT_BRACE // %{
+	STARSTAR      // **
 
 	// Keywords
 	AND
@@ -130,6 +131,7 @@ var tokenNames = [...]string{
 	SLASH:         "/",
 	SLASHSLASH:    "//",
 	PERCENT:       "%",
+	PERCENT_BRACE: "%{",
 	AMP:           "&",
 	PIPE:          "|",
 	CIRCUMFLEX:    "^",
@@ -810,6 +812,12 @@ start:
 			}
 			return SLASH
 		case '%':
+			if sc.peekRune() == '{' {
+				sc.readRune()
+				sc.depth++
+				return PERCENT_BRACE
+			}
+
 			return PERCENT
 		case '&':
 			return AMP

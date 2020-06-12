@@ -97,6 +97,7 @@ func (*WhileStmt) stmt()  {}
 func (*IfStmt) stmt()     {}
 func (*LoadStmt) stmt()   {}
 func (*ReturnStmt) stmt() {}
+func (*ProtoEntry) stmt() {}
 
 // An AssignStmt represents an assignment:
 //	x = 0
@@ -235,6 +236,8 @@ func (*SliceExpr) expr()     {}
 func (*TupleExpr) expr()     {}
 func (*UnaryExpr) expr()     {}
 func (*AtExpr) expr()        {}
+func (*ProtoExpr) expr()     {}
+func (*ProtoEntry) expr()    {}
 
 // An Ident represents an identifier.
 type Ident struct {
@@ -393,6 +396,33 @@ type DictEntry struct {
 }
 
 func (x *DictEntry) Span() (start, end Position) {
+	start, _ = x.Key.Span()
+	_, end = x.Value.Span()
+	return start, end
+}
+
+// A ProtoExpr represents a prototype literal: %{ List }.
+type ProtoExpr struct {
+	commentsRef
+	Lbrace Position
+	List   []Stmt // all *ProtoEntrys
+	Rbrace Position
+}
+
+func (x *ProtoExpr) Span() (start, end Position) {
+	return x.Lbrace, x.Rbrace.add("}")
+}
+
+// A ProtoEntry represents a dictionary entry: Key: Value.
+// Used only within a ProtoExpr.
+type ProtoEntry struct {
+	commentsRef
+	Key   Expr
+	Colon Position
+	Value Stmt
+}
+
+func (x *ProtoEntry) Span() (start, end Position) {
 	start, _ = x.Key.Span()
 	_, end = x.Value.Span()
 	return start, end

@@ -111,6 +111,8 @@ const (
 	SLICE       //   x lo hi step SLICE       slice
 	INPLACE_ADD //            x y INPLACE_ADD z      where z is x+y or x.extend(y)
 	MAKEDICT    //              - MAKEDICT    dict
+	MAKEPROTO   //              - MAKEPROTO   proto
+	SETPROTOKEY //      proto k v SETDICTUNIQ -
 	SETCELL     //     value cell SETCELL     -
 	CELL        //           cell CELL        value
 
@@ -1362,6 +1364,25 @@ func (fcomp *fcomp) expr(e syntax.Expr) {
 			fcomp.expr(entry.Value)
 			fcomp.setPos(entry.Colon)
 			fcomp.emit(SETDICTUNIQ)
+		}
+	case *syntax.ProtoExpr:
+		fcomp.emit(MAKEPROTO)
+		for _, entry := range e.List {
+			entry := entry.(*syntax.ProtoEntry)
+			fcomp.emit(DUP)
+			fcomp.emit1(CONSTANT, fcomp.pcomp.constantIndex(entry.Key.(*syntax.Ident).Name))
+			switch v := entry.Value.(type) {
+			case *syntax.ExprStmt:
+				fcomp.expr(v.X)
+			case *syntax.DefStmt:
+				fcomp.function(v.Function.(*resolve.Function))
+			default:
+				start, _ := e.Span()
+				log.Panicf("%s: unexpected proto value type: %T", start, v)
+			}
+
+			fcomp.setPos(entry.Colon)
+			fcomp.emit(SETPROTOKEY)
 		}
 
 	case *syntax.UnaryExpr:

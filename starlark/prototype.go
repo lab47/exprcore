@@ -357,8 +357,6 @@ func (s *Prototype) SetField(name string, v Value) error {
 
 			parent.value = p
 		}
-
-		return nil
 	}
 
 	// Binary search the entries.
