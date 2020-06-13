@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package starlark_test
+package exprcore_test
 
 import (
 	"bytes"
@@ -13,11 +13,11 @@ import (
 	"strings"
 	"testing"
 
-	"go.starlark.net/internal/chunkedfile"
-	"go.starlark.net/resolve"
-	"go.starlark.net/starlark"
-	"go.starlark.net/starlarktest"
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/exprcore"
+	"github.com/lab47/exprcore/exprcoretest"
+	"github.com/lab47/exprcore/internal/chunkedfile"
+	"github.com/lab47/exprcore/resolve"
+	"github.com/lab47/exprcore/syntax"
 )
 
 // A test may enable non-standard options by containing (e.g.) "option:recursion".
@@ -43,8 +43,8 @@ type Wrapper interface {
 func TestEvalExpr(t *testing.T) {
 	// This is mostly redundant with the new *.star tests.
 	// TODO(adonovan): move checks into *.star files and
-	// reduce this to a mere unit test of starlark.Eval.
-	thread := new(starlark.Thread)
+	// reduce this to a mere unit test of exprcore.Eval.
+	thread := new(exprcore.Thread)
 	for _, test := range []struct{ src, want string }{
 		{`123`, `123`},
 		{`-1`, `-1`},
@@ -94,7 +94,7 @@ func TestEvalExpr(t *testing.T) {
 		{`[x for x in range(3)]`, "[0, 1, 2]"},
 	} {
 		var got string
-		if v, err := starlark.Eval(thread, "<expr>", test.src, nil); err != nil {
+		if v, err := exprcore.Eval(thread, "<expr>", test.src, nil); err != nil {
 			got = err.Error()
 		} else {
 			got = v.String()
@@ -107,9 +107,9 @@ func TestEvalExpr(t *testing.T) {
 
 func TestExecFile(t *testing.T) {
 	defer setOptions("")
-	testdata := "." // starlarktest.DataFile("starlark", ".")
-	thread := &starlark.Thread{Load: load}
-	starlarktest.SetReporter(thread, t)
+	testdata := "." // exprcoretest.DataFile("exprcore", ".")
+	thread := &exprcore.Thread{Load: load}
+	exprcoretest.SetReporter(thread, t)
 	for _, file := range []string{
 		"testdata/assign.star",
 		"testdata/bool.star",
@@ -130,17 +130,17 @@ func TestExecFile(t *testing.T) {
 	} {
 		filename := filepath.Join(testdata, file)
 		for _, chunk := range chunkedfile.Read(filename, t) {
-			predeclared := starlark.StringDict{
-				"hasfields": starlark.NewBuiltin("hasfields", newHasFields),
+			predeclared := exprcore.StringDict{
+				"hasfields": exprcore.NewBuiltin("hasfields", newHasFields),
 				"fibonacci": fib{},
 			}
 
 			setOptions(chunk.Source)
 			resolve.AllowLambda = true // used extensively
 
-			_, err := starlark.ExecFile(thread, filename, chunk.Source, predeclared)
+			_, err := exprcore.ExecFile(thread, filename, chunk.Source, predeclared)
 			switch err := err.(type) {
-			case *starlark.EvalError:
+			case *exprcore.EvalError:
 				found := false
 				for i := range err.CallStack {
 					posn := err.CallStack.At(i).Pos
@@ -169,35 +169,35 @@ type fib struct{}
 func (t fib) Freeze()                    {}
 func (t fib) String() string             { return "fib" }
 func (t fib) Type() string               { return "fib" }
-func (t fib) Truth() starlark.Bool       { return true }
+func (t fib) Truth() exprcore.Bool       { return true }
 func (t fib) Hash() (uint32, error)      { return 0, fmt.Errorf("fib is unhashable") }
-func (t fib) Iterate() starlark.Iterator { return &fibIterator{0, 1} }
+func (t fib) Iterate() exprcore.Iterator { return &fibIterator{0, 1} }
 
 type fibIterator struct{ x, y int }
 
-func (it *fibIterator) Next(p *starlark.Value) bool {
-	*p = starlark.MakeInt(it.x)
+func (it *fibIterator) Next(p *exprcore.Value) bool {
+	*p = exprcore.MakeInt(it.x)
 	it.x, it.y = it.y, it.x+it.y
 	return true
 }
 func (it *fibIterator) Done() {}
 
 // load implements the 'load' operation as used in the evaluator tests.
-func load(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+func load(thread *exprcore.Thread, module string) (exprcore.StringDict, error) {
 	if module == "assert.star" {
-		return starlarktest.LoadAssertModule()
+		return exprcoretest.LoadAssertModule()
 	}
 
 	// TODO(adonovan): test load() using this execution path.
 	filename := filepath.Join(filepath.Dir(thread.CallFrame(0).Pos.Filename()), module)
-	return starlark.ExecFile(thread, filename, nil, nil)
+	return exprcore.ExecFile(thread, filename, nil, nil)
 }
 
-func newHasFields(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func newHasFields(thread *exprcore.Thread, b *exprcore.Builtin, args exprcore.Tuple, kwargs []exprcore.Tuple) (exprcore.Value, error) {
 	if len(args)+len(kwargs) > 0 {
 		return nil, fmt.Errorf("%s: unexpected arguments", b.Name())
 	}
-	return &hasfields{attrs: make(map[string]starlark.Value)}, nil
+	return &hasfields{attrs: make(map[string]exprcore.Value)}, nil
 }
 
 // hasfields is a test-only implementation of HasAttrs.
@@ -205,18 +205,18 @@ func newHasFields(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tu
 // Clients will likely want to provide their own implementation,
 // so we don't have any public implementation.
 type hasfields struct {
-	attrs  starlark.StringDict
+	attrs  exprcore.StringDict
 	frozen bool
 }
 
 var (
-	_ starlark.HasAttrs  = (*hasfields)(nil)
-	_ starlark.HasBinary = (*hasfields)(nil)
+	_ exprcore.HasAttrs  = (*hasfields)(nil)
+	_ exprcore.HasBinary = (*hasfields)(nil)
 )
 
 func (hf *hasfields) String() string        { return "hasfields" }
 func (hf *hasfields) Type() string          { return "hasfields" }
-func (hf *hasfields) Truth() starlark.Bool  { return true }
+func (hf *hasfields) Truth() exprcore.Bool  { return true }
 func (hf *hasfields) Hash() (uint32, error) { return 42, nil }
 
 func (hf *hasfields) Freeze() {
@@ -228,14 +228,14 @@ func (hf *hasfields) Freeze() {
 	}
 }
 
-func (hf *hasfields) Attr(name string) (starlark.Value, error) { return hf.attrs[name], nil }
+func (hf *hasfields) Attr(name string) (exprcore.Value, error) { return hf.attrs[name], nil }
 
-func (hf *hasfields) SetField(name string, val starlark.Value) error {
+func (hf *hasfields) SetField(name string, val exprcore.Value) error {
 	if hf.frozen {
 		return fmt.Errorf("cannot set field on a frozen hasfields")
 	}
 	if strings.HasPrefix(name, "no") { // for testing
-		return starlark.NoSuchAttrError(fmt.Sprintf("no .%s field", name))
+		return exprcore.NoSuchAttrError(fmt.Sprintf("no .%s field", name))
 	}
 	hf.attrs[name] = val
 	return nil
@@ -250,12 +250,12 @@ func (hf *hasfields) AttrNames() []string {
 	return names
 }
 
-func (hf *hasfields) Binary(op syntax.Token, y starlark.Value, side starlark.Side) (starlark.Value, error) {
+func (hf *hasfields) Binary(op syntax.Token, y exprcore.Value, side exprcore.Side) (exprcore.Value, error) {
 	// This method exists so we can exercise 'list += x'
 	// where x is not Iterable but defines list+x.
 	if op == syntax.PLUS {
-		if _, ok := y.(*starlark.List); ok {
-			return starlark.MakeInt(42), nil // list+hasfields is 42
+		if _, ok := y.(*exprcore.List); ok {
+			return exprcore.MakeInt(42), nil // list+hasfields is 42
 		}
 	}
 	return nil, nil
@@ -296,8 +296,8 @@ def j(a, b=42, *args, c, d=123, e, **kwargs) {
 }
 `
 
-	thread := new(starlark.Thread)
-	globals, err := starlark.ExecFile(thread, filename, src, nil)
+	thread := new(exprcore.Thread)
+	globals, err := exprcore.ExecFile(thread, filename, src, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -420,7 +420,7 @@ def j(a, b=42, *args, c, d=123, e, **kwargs) {
 		{`j(0, 1, 2, c=3, e=4)`, `(0, 1, (2,), 3, 123, 4, %{})`},
 	} {
 		var got string
-		if v, err := starlark.Eval(thread, "<expr>", test.src, globals); err != nil {
+		if v, err := exprcore.Eval(thread, "<expr>", test.src, globals); err != nil {
 			got = err.Error()
 		} else {
 			got = v.String()
@@ -431,7 +431,7 @@ def j(a, b=42, *args, c, d=123, e, **kwargs) {
 	}
 }
 
-// TestPrint ensures that the Starlark print function calls
+// TestPrint ensures that the exprcore print function calls
 // Thread.Print, if provided.
 func TestPrint(t *testing.T) {
 	const src = `
@@ -440,12 +440,12 @@ def f() { print("hello", "world", sep=", ") }
 f()
 `
 	buf := new(bytes.Buffer)
-	print := func(thread *starlark.Thread, msg string) {
+	print := func(thread *exprcore.Thread, msg string) {
 		caller := thread.CallFrame(1)
 		fmt.Fprintf(buf, "%s: %s: %s\n", caller.Pos, caller.Name, msg)
 	}
-	thread := &starlark.Thread{Print: print}
-	if _, err := starlark.ExecFile(thread, "foo.star", src, nil); err != nil {
+	thread := &exprcore.Thread{Print: print}
+	if _, err := exprcore.ExecFile(thread, "foo.star", src, nil); err != nil {
 		t.Fatal(err)
 	}
 	want := "foo.star:2:6: <toplevel>: hello\n" +
@@ -456,7 +456,7 @@ f()
 }
 
 func reportEvalError(tb testing.TB, err error) {
-	if err, ok := err.(*starlark.EvalError); ok {
+	if err, ok := err.(*exprcore.EvalError); ok {
 		tb.Fatal(err.Backtrace())
 	}
 	tb.Fatal(err)
@@ -465,21 +465,21 @@ func reportEvalError(tb testing.TB, err error) {
 // TestInt exercises the Int.Int64 and Int.Uint64 methods.
 // If we can move their logic into math/big, delete this test.
 func TestInt(t *testing.T) {
-	one := starlark.MakeInt(1)
+	one := exprcore.MakeInt(1)
 
 	for _, test := range []struct {
-		i          starlark.Int
+		i          exprcore.Int
 		wantInt64  string
 		wantUint64 string
 	}{
-		{starlark.MakeInt64(math.MinInt64).Sub(one), "error", "error"},
-		{starlark.MakeInt64(math.MinInt64), "-9223372036854775808", "error"},
-		{starlark.MakeInt64(-1), "-1", "error"},
-		{starlark.MakeInt64(0), "0", "0"},
-		{starlark.MakeInt64(1), "1", "1"},
-		{starlark.MakeInt64(math.MaxInt64), "9223372036854775807", "9223372036854775807"},
-		{starlark.MakeUint64(math.MaxUint64), "error", "18446744073709551615"},
-		{starlark.MakeUint64(math.MaxUint64).Add(one), "error", "error"},
+		{exprcore.MakeInt64(math.MinInt64).Sub(one), "error", "error"},
+		{exprcore.MakeInt64(math.MinInt64), "-9223372036854775808", "error"},
+		{exprcore.MakeInt64(-1), "-1", "error"},
+		{exprcore.MakeInt64(0), "0", "0"},
+		{exprcore.MakeInt64(1), "1", "1"},
+		{exprcore.MakeInt64(math.MaxInt64), "9223372036854775807", "9223372036854775807"},
+		{exprcore.MakeUint64(math.MaxUint64), "error", "18446744073709551615"},
+		{exprcore.MakeUint64(math.MaxUint64).Add(one), "error", "error"},
 	} {
 		gotInt64, gotUint64 := "error", "error"
 		if i, ok := test.i.Int64(); ok {
@@ -500,7 +500,7 @@ func TestInt(t *testing.T) {
 func backtrace(t *testing.T, err error) string {
 	t.Helper()
 	switch err := err.(type) {
-	case *starlark.EvalError:
+	case *exprcore.EvalError:
 		return err.Backtrace()
 	case nil:
 		t.Fatalf("ExecFile succeeded unexpectedly")
@@ -511,7 +511,7 @@ func backtrace(t *testing.T, err error) string {
 }
 
 func TestBacktrace(t *testing.T) {
-	// This test ensures continuity of the stack of active Starlark
+	// This test ensures continuity of the stack of active exprcore
 	// functions, including propagation through built-ins such as 'min'.
 	const src = `
 def f(x) { return 1//x }
@@ -520,8 +520,8 @@ def h() { return min([1, 2, 0], key=g) }
 def i() { return h() }
 i()
 `
-	thread := new(starlark.Thread)
-	_, err := starlark.ExecFile(thread, "crash.star", src, nil)
+	thread := new(exprcore.Thread)
+	_, err := exprcore.ExecFile(thread, "crash.star", src, nil)
 	// Compiled code currently has no column information.
 	const want = `Traceback (most recent call last):
   crash.star:6:2: in <toplevel>
@@ -536,9 +536,9 @@ Error: floored division by zero`
 	}
 
 	// Additionally, ensure that errors originating in
-	// Starlark and/or Go each have an accurate frame.
+	// exprcore and/or Go each have an accurate frame.
 	//
-	// This program fails in Starlark (f) if x==0,
+	// This program fails in exprcore (f) if x==0,
 	// or in Go (string.join) if x is non-zero.
 	const src2 = `
 def f() { ''.join([1//i]) }
@@ -555,8 +555,8 @@ Error: floored division by zero`,
   <builtin>: in join
 Error: join: in list, want string, got int`,
 	} {
-		globals := starlark.StringDict{"i": starlark.MakeInt(i)}
-		_, err := starlark.ExecFile(thread, "crash.star", src2, globals)
+		globals := exprcore.StringDict{"i": exprcore.MakeInt(i)}
+		_, err := exprcore.ExecFile(thread, "crash.star", src2, globals)
 		if got := backtrace(t, err); got != want {
 			t.Errorf("error was %s, want %s", got, want)
 		}
@@ -567,7 +567,7 @@ func TestLoadBacktrace(t *testing.T) {
 	// This test ensures that load() does NOT preserve stack traces,
 	// but that API callers can get them with Unwrap().
 	// For discussion, see:
-	// https://github.com/google/starlark-go/pull/244
+	// https://github.com/google/exprcore-go/pull/244
 	const src = `
 load('crash.star', 'x')
 `
@@ -577,11 +577,11 @@ def f(x) {
 }
 f(0)
 `
-	thread := new(starlark.Thread)
-	thread.Load = func(t *starlark.Thread, module string) (starlark.StringDict, error) {
-		return starlark.ExecFile(new(starlark.Thread), module, loadedSrc, nil)
+	thread := new(exprcore.Thread)
+	thread.Load = func(t *exprcore.Thread, module string) (exprcore.StringDict, error) {
+		return exprcore.ExecFile(new(exprcore.Thread), module, loadedSrc, nil)
 	}
-	_, err := starlark.ExecFile(thread, "root.star", src, nil)
+	_, err := exprcore.ExecFile(thread, "root.star", src, nil)
 
 	const want = `Traceback (most recent call last):
   root.star:2:1: in <toplevel>
@@ -590,10 +590,10 @@ Error: cannot load crash.star: floored division by zero`
 		t.Errorf("error was <<%s>>, want <<%s>>", got, want)
 	}
 
-	unwrapEvalError := func(err error) *starlark.EvalError {
-		var result *starlark.EvalError
+	unwrapEvalError := func(err error) *exprcore.EvalError {
+		var result *exprcore.EvalError
 		for {
-			if evalErr, ok := err.(*starlark.EvalError); ok {
+			if evalErr, ok := err.(*exprcore.EvalError); ok {
 				result = evalErr
 			}
 
@@ -621,24 +621,24 @@ Error: floored division by zero`
 // TestRepeatedExec parses and resolves a file syntax tree once then
 // executes it repeatedly with different values of its predeclared variables.
 func TestRepeatedExec(t *testing.T) {
-	predeclared := starlark.StringDict{"x": starlark.None}
-	_, prog, err := starlark.SourceProgram("repeat.star", "y = 2 * x", predeclared.Has)
+	predeclared := exprcore.StringDict{"x": exprcore.None}
+	_, prog, err := exprcore.SourceProgram("repeat.star", "y = 2 * x", predeclared.Has)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, test := range []struct {
-		x, want starlark.Value
+		x, want exprcore.Value
 	}{
-		{x: starlark.MakeInt(42), want: starlark.MakeInt(84)},
-		{x: starlark.String("mur"), want: starlark.String("murmur")},
-		{x: starlark.Tuple{starlark.None}, want: starlark.Tuple{starlark.None, starlark.None}},
+		{x: exprcore.MakeInt(42), want: exprcore.MakeInt(84)},
+		{x: exprcore.String("mur"), want: exprcore.String("murmur")},
+		{x: exprcore.Tuple{exprcore.None}, want: exprcore.Tuple{exprcore.None, exprcore.None}},
 	} {
 		predeclared["x"] = test.x // update the values in dictionary
-		thread := new(starlark.Thread)
+		thread := new(exprcore.Thread)
 		if globals, err := prog.Init(thread, predeclared); err != nil {
 			t.Errorf("x=%v: %v", test.x, err) // exec error
-		} else if eq, err := starlark.Equal(globals["y"], test.want); err != nil {
+		} else if eq, err := exprcore.Equal(globals["y"], test.want); err != nil {
 			t.Errorf("x=%v: %v", test.x, err) // comparison error
 		} else if !eq {
 			t.Errorf("x=%v: got y=%v, want %v", test.x, globals["y"], test.want)
@@ -649,9 +649,9 @@ func TestRepeatedExec(t *testing.T) {
 // TestEmptyFilePosition ensures that even Programs
 // from empty files have a valid position.
 func TestEmptyPosition(t *testing.T) {
-	var predeclared starlark.StringDict
+	var predeclared exprcore.StringDict
 	for _, content := range []string{"", "empty = False"} {
-		_, prog, err := starlark.SourceProgram("hello.star", content, predeclared.Has)
+		_, prog, err := exprcore.SourceProgram("hello.star", content, predeclared.Has)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -662,12 +662,12 @@ func TestEmptyPosition(t *testing.T) {
 }
 
 // TestUnpackUserDefined tests that user-defined
-// implementations of starlark.Value may be unpacked.
+// implementations of exprcore.Value may be unpacked.
 func TestUnpackUserDefined(t *testing.T) {
 	// success
 	want := new(hasfields)
 	var x *hasfields
-	if err := starlark.UnpackArgs("unpack", starlark.Tuple{want}, nil, "x", &x); err != nil {
+	if err := exprcore.UnpackArgs("unpack", exprcore.Tuple{want}, nil, "x", &x); err != nil {
 		t.Errorf("UnpackArgs failed: %v", err)
 	}
 	if x != want {
@@ -675,7 +675,7 @@ func TestUnpackUserDefined(t *testing.T) {
 	}
 
 	// failure
-	err := starlark.UnpackArgs("unpack", starlark.Tuple{starlark.MakeInt(42)}, nil, "x", &x)
+	err := exprcore.UnpackArgs("unpack", exprcore.Tuple{exprcore.MakeInt(42)}, nil, "x", &x)
 	if want := "unpack: for parameter x: got int, want hasfields"; fmt.Sprint(err) != want {
 		t.Errorf("unpack args error = %q, want %q", err, want)
 	}
@@ -686,8 +686,8 @@ type optionalStringUnpacker struct {
 	isSet bool
 }
 
-func (o *optionalStringUnpacker) Unpack(v starlark.Value) error {
-	s, ok := starlark.AsString(v)
+func (o *optionalStringUnpacker) Unpack(v exprcore.Value) error {
+	s, ok := exprcore.AsString(v)
 	if !ok {
 		return fmt.Errorf("got %s, want string", v.Type())
 	}
@@ -703,7 +703,7 @@ func TestUnpackCustomUnpacker(t *testing.T) {
 	wantB := optionalStringUnpacker{str: "b"}
 
 	// Success
-	if err := starlark.UnpackArgs("unpack", starlark.Tuple{starlark.String("a")}, nil, "a?", &a, "b?", &b); err != nil {
+	if err := exprcore.UnpackArgs("unpack", exprcore.Tuple{exprcore.String("a")}, nil, "a?", &a, "b?", &b); err != nil {
 		t.Errorf("UnpackArgs failed: %v", err)
 	}
 	if a != wantA {
@@ -714,34 +714,34 @@ func TestUnpackCustomUnpacker(t *testing.T) {
 	}
 
 	// failure
-	err := starlark.UnpackArgs("unpack", starlark.Tuple{starlark.MakeInt(42)}, nil, "a", &a)
+	err := exprcore.UnpackArgs("unpack", exprcore.Tuple{exprcore.MakeInt(42)}, nil, "a", &a)
 	if want := "unpack: for parameter a: got int, want string"; fmt.Sprint(err) != want {
 		t.Errorf("unpack args error = %q, want %q", err, want)
 	}
 }
 
 func TestDocstring(t *testing.T) {
-	globals, _ := starlark.ExecFile(&starlark.Thread{}, "doc.star", `
+	globals, _ := exprcore.ExecFile(&exprcore.Thread{}, "doc.star", `
 def somefunc() {
 	"somefunc doc"
 	return 0
 }
 `, nil)
 
-	if globals["somefunc"].(*starlark.Function).Doc() != "somefunc doc" {
+	if globals["somefunc"].(*exprcore.Function).Doc() != "somefunc doc" {
 		t.Fatal("docstring not found")
 	}
 }
 
 func TestFrameLocals(t *testing.T) {
 	// trace prints a nice stack trace including argument
-	// values of calls to Starlark functions.
-	trace := func(thread *starlark.Thread) string {
+	// values of calls to exprcore functions.
+	trace := func(thread *exprcore.Thread) string {
 		buf := new(bytes.Buffer)
 		for i := 0; i < thread.CallStackDepth(); i++ {
 			fr := thread.DebugFrame(i)
 			fmt.Fprintf(buf, "%s(", fr.Callable().Name())
-			if fn, ok := fr.Callable().(*starlark.Function); ok {
+			if fn, ok := fr.Callable().(*exprcore.Function); ok {
 				for i := 0; i < fn.NumParams(); i++ {
 					if i > 0 {
 						buf.WriteString(", ")
@@ -758,14 +758,14 @@ func TestFrameLocals(t *testing.T) {
 	}
 
 	var got string
-	builtin := func(thread *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
+	builtin := func(thread *exprcore.Thread, _ *exprcore.Builtin, _ exprcore.Tuple, _ []exprcore.Tuple) (exprcore.Value, error) {
 		got = trace(thread)
-		return starlark.None, nil
+		return exprcore.None, nil
 	}
-	predeclared := starlark.StringDict{
-		"builtin": starlark.NewBuiltin("builtin", builtin),
+	predeclared := exprcore.StringDict{
+		"builtin": exprcore.NewBuiltin("builtin", builtin),
 	}
-	_, err := starlark.ExecFile(&starlark.Thread{}, "foo.star", `
+	_, err := exprcore.ExecFile(&exprcore.Thread{}, "foo.star", `
 def f(x, y) { builtin() }
 def g(z) { f(z, z*z) }
 g(7)
@@ -789,11 +789,11 @@ type badType string
 
 func (b *badType) String() string        { return "badType" }
 func (b *badType) Type() string          { return "badType:" + string(*b) } // panics if b==nil
-func (b *badType) Truth() starlark.Bool  { return true }
+func (b *badType) Truth() exprcore.Bool  { return true }
 func (b *badType) Hash() (uint32, error) { return 0, nil }
 func (b *badType) Freeze()               {}
 
-var _ starlark.Value = new(badType)
+var _ exprcore.Value = new(badType)
 
 // TestUnpackErrorBadType verifies that the Unpack functions fail
 // gracefully when a parameter's default value's Type method panics.
@@ -802,10 +802,10 @@ func TestUnpackErrorBadType(t *testing.T) {
 		x    *badType
 		want string
 	}{
-		{new(badType), "got NoneType, want badType"},       // Starlark type name
-		{nil, "got NoneType, want *starlark_test.badType"}, // Go type name
+		{new(badType), "got NoneType, want badType"},       // exprcore type name
+		{nil, "got NoneType, want *exprcore_test.badType"}, // Go type name
 	} {
-		err := starlark.UnpackArgs("f", starlark.Tuple{starlark.None}, nil, "x", &test.x)
+		err := exprcore.UnpackArgs("f", exprcore.Tuple{exprcore.None}, nil, "x", &test.x)
 		if err == nil {
 			t.Errorf("UnpackArgs succeeded unexpectedly")
 			continue
@@ -816,16 +816,16 @@ func TestUnpackErrorBadType(t *testing.T) {
 	}
 }
 
-// Regression test for github.com/google/starlark-go/issues/233.
+// Regression test for github.com/google/exprcore-go/issues/233.
 func TestREPLChunk(t *testing.T) {
-	thread := new(starlark.Thread)
-	globals := make(starlark.StringDict)
+	thread := new(exprcore.Thread)
+	globals := make(exprcore.StringDict)
 	exec := func(src string) {
 		f, err := syntax.Parse("<repl>", src, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := starlark.ExecREPLChunk(f, thread, globals); err != nil {
+		if err := exprcore.ExecREPLChunk(f, thread, globals); err != nil {
 			t.Fatal(err)
 		}
 	}

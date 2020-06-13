@@ -1,4 +1,4 @@
-package starlark
+package exprcore
 
 // This file defines the bytecode interpreter.
 
@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 
-	"go.starlark.net/internal/compile"
-	"go.starlark.net/internal/spell"
-	"go.starlark.net/resolve"
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/internal/compile"
+	"github.com/lab47/exprcore/internal/spell"
+	"github.com/lab47/exprcore/resolve"
+	"github.com/lab47/exprcore/syntax"
 )
 
 const vmdebug = false // TODO(adonovan): use a bitfield of specific kinds of error.

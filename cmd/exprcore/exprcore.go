@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// The starlark command interprets a Starlark file.
+// The exprcore command interprets a exprcore file.
 // With no arguments, it starts a read-eval-print loop (REPL).
-package main // import "go.starlark.net/cmd/starlark"
+package main // import "github.com/lab47/exprcore/cmd/exprcore"
 
 import (
 	"flag"
@@ -15,17 +15,17 @@ import (
 	"runtime/pprof"
 	"strings"
 
-	"go.starlark.net/internal/compile"
-	"go.starlark.net/repl"
-	"go.starlark.net/resolve"
-	"go.starlark.net/starlark"
+	"github.com/lab47/exprcore/exprcore"
+	"github.com/lab47/exprcore/internal/compile"
+	"github.com/lab47/exprcore/repl"
+	"github.com/lab47/exprcore/resolve"
 )
 
 // flags
 var (
 	cpuprofile = flag.String("cpuprofile", "", "gather Go CPU profile in this file")
 	memprofile = flag.String("memprofile", "", "gather Go memory profile in this file")
-	profile    = flag.String("profile", "", "gather Starlark time profile in this file")
+	profile    = flag.String("profile", "", "gather exprcore time profile in this file")
 	showenv    = flag.Bool("showenv", false, "on success, print final global environment")
 	execprog   = flag.String("c", "", "execute program `prog`")
 )
@@ -47,7 +47,7 @@ func main() {
 }
 
 func doMain() int {
-	log.SetPrefix("starlark: ")
+	log.SetPrefix("exprcore: ")
 	log.SetFlags(0)
 	flag.Parse()
 
@@ -77,16 +77,16 @@ func doMain() int {
 	if *profile != "" {
 		f, err := os.Create(*profile)
 		check(err)
-		err = starlark.StartProfile(f)
+		err = exprcore.StartProfile(f)
 		check(err)
 		defer func() {
-			err := starlark.StopProfile()
+			err := exprcore.StopProfile()
 			check(err)
 		}()
 	}
 
-	thread := &starlark.Thread{Load: repl.MakeLoad()}
-	globals := make(starlark.StringDict)
+	thread := &exprcore.Thread{Load: repl.MakeLoad()}
+	globals := make(exprcore.StringDict)
 
 	switch {
 	case flag.NArg() == 1 || *execprog != "":
@@ -104,18 +104,18 @@ func doMain() int {
 			filename = flag.Arg(0)
 		}
 		thread.Name = "exec " + filename
-		globals, err = starlark.ExecFile(thread, filename, src, nil)
+		globals, err = exprcore.ExecFile(thread, filename, src, nil)
 		if err != nil {
 			repl.PrintError(err)
 			return 1
 		}
 	case flag.NArg() == 0:
-		fmt.Println("Welcome to Starlark (go.starlark.net)")
+		fmt.Println("Welcome to exprcore (github.com/lab47/exprcore)")
 		thread.Name = "REPL"
 		repl.REPL(thread, globals)
 		return 0
 	default:
-		log.Print("want at most one Starlark file name")
+		log.Print("want at most one exprcore file name")
 		return 1
 	}
 

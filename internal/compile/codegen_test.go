@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"go.starlark.net/resolve"
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/resolve"
+	"github.com/lab47/exprcore/syntax"
 )
 
 // TestPlusFolding ensures that the compiler generates optimized code for

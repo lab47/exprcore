@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"go.starlark.net/internal/chunkedfile"
-	"go.starlark.net/resolve"
-	"go.starlark.net/starlarktest"
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/exprcoretest"
+	"github.com/lab47/exprcore/internal/chunkedfile"
+	"github.com/lab47/exprcore/resolve"
+	"github.com/lab47/exprcore/syntax"
 )
 
 func setOptions(src string) {
@@ -30,7 +30,7 @@ func option(chunk, name string) bool {
 
 func TestResolve(t *testing.T) {
 	defer setOptions("")
-	filename := starlarktest.DataFile("resolve", "testdata/resolve.star")
+	filename := exprcoretest.DataFile("resolve", "testdata/resolve.star")
 	for _, chunk := range chunkedfile.Read(filename, t) {
 		f, err := syntax.Parse(filename, chunk.Source, 0)
 		if err != nil {

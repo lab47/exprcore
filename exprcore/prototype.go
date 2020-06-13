@@ -1,4 +1,4 @@
-package starlark
+package exprcore
 
 import (
 	"errors"
@@ -6,16 +6,16 @@ import (
 	"sort"
 	"strings"
 
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/syntax"
 )
 
 // Make is the implementation of a built-in function that instantiates
 // an immutable struct from the specified keyword arguments.
 //
-// An application can add 'struct' to the Starlark environment like so:
+// An application can add 'struct' to the exprcore environment like so:
 //
-// 	globals := starlark.StringDict{
-// 		"struct":  starlark.NewBuiltin("struct", starlarkstruct.Make),
+// 	globals := exprcore.StringDict{
+// 		"struct":  exprcore.NewBuiltin("struct", exprcorestruct.Make),
 // 	}
 //
 func Make(_ *Thread, _ *Builtin, args Tuple, kwargs []Tuple) (Value, error) {
@@ -75,7 +75,7 @@ type parent struct {
 	value *Prototype
 }
 
-// Prototype is an immutable Starlark type that maps field names to values.
+// Prototype is an immutable exprcore type that maps field names to values.
 // It is not iterable and does not support len.
 //
 // A struct has a constructor, a distinct value that identifies a class

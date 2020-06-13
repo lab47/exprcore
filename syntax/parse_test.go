@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"go.starlark.net/internal/chunkedfile"
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/internal/chunkedfile"
+	"github.com/lab47/exprcore/syntax"
 )
 
 func TestExprParseTrees(t *testing.T) {
@@ -336,7 +336,7 @@ func TestCompoundStmt(t *testing.T) {
 		// Even as a 1-liner, the following blank line is required.
 		{"if cond { pass\n\n}",
 			`(IfStmt Cond=cond True=((BranchStmt Token=pass)))`},
-		// github.com/google/starlark-go/issues/121
+		// github.com/google/exprcore-go/issues/121
 		{"a; b; c\n",
 			`(ExprStmt X=a)`},
 		{"a; b c\n",
@@ -464,7 +464,7 @@ func writeTree(out *bytes.Buffer, x reflect.Value) {
 }
 
 func TestParseErrors(t *testing.T) {
-	filename := "./testdata/errors.star" // starlarktest.DataFile("syntax", "testdata/errors.star")
+	filename := "./testdata/errors.star" // exprcoretest.DataFile("syntax", "testdata/errors.star")
 	for _, chunk := range chunkedfile.Read(filename, t) {
 		_, err := syntax.Parse(filename, chunk.Source, 0)
 		switch err := err.(type) {
@@ -479,10 +479,10 @@ func TestParseErrors(t *testing.T) {
 	}
 }
 
-// dataFile is the same as starlarktest.DataFile.
+// dataFile is the same as exprcoretest.DataFile.
 // We make a copy to avoid a dependency cycle.
 var dataFile = func(pkgdir, filename string) string {
-	return filepath.Join(build.Default.GOPATH, "src/go.starlark.net", pkgdir, filename)
+	return filepath.Join(build.Default.GOPATH, "src/github.com/lab47/exprcore", pkgdir, filename)
 }
 
 func BenchmarkParse(b *testing.B) {

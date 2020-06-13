@@ -86,12 +86,12 @@ import (
 	debugpkg "runtime/debug"
 	"unsafe"
 
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/syntax"
 )
 
 const magic = "!sky"
 
-// Encode encodes a compiled Starlark program.
+// Encode encodes a compiled exprcore program.
 func (prog *Program) Encode() []byte {
 	var e encoder
 	e.p = append(e.p, magic...)
@@ -205,7 +205,7 @@ func b2i(b bool) int {
 	}
 }
 
-// DecodeProgram decodes a compiled Starlark program from data.
+// DecodeProgram decodes a compiled exprcore program from data.
 func DecodeProgram(data []byte) (_ *Program, err error) {
 	if len(data) < len(magic) {
 		return nil, fmt.Errorf("not a compiled module: no magic number")

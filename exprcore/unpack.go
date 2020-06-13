@@ -1,4 +1,4 @@
-package starlark
+package exprcore
 
 // This file defines the Unpack helper functions used by
 // built-in functions to interpret their call arguments.
@@ -35,7 +35,7 @@ type Unpacker interface {
 // its Type() method while constructing the error message.
 //
 // Beware: an optional *List, *Dict, Callable, Iterable, or Value variable that is
-// not assigned is not a valid Starlark Value, so the caller must
+// not assigned is not a valid exprcore Value, so the caller must
 // explicitly handle such cases by interpreting nil as None or some
 // computed default.
 func UnpackArgs(fnname string, args Tuple, kwargs []Tuple, pairs ...interface{}) error {
@@ -184,7 +184,7 @@ func unpackOneArg(v Value, ptr interface{}) error {
 		}
 		*ptr = it
 	default:
-		// v must have type *V, where V is some subtype of starlark.Value.
+		// v must have type *V, where V is some subtype of exprcore.Value.
 		ptrv := reflect.ValueOf(ptr)
 		if ptrv.Kind() != reflect.Ptr {
 			log.Panicf("internal error: not a pointer: %T", ptr)
@@ -200,9 +200,9 @@ func unpackOneArg(v Value, ptr interface{}) error {
 				log.Panicf("pointer element type does not implement Value: %T", ptr)
 			}
 
-			// Report Starlark dynamic type error.
+			// Report exprcore dynamic type error.
 			//
-			// We prefer the Starlark Value.Type name over
+			// We prefer the exprcore Value.Type name over
 			// its Go reflect.Type name, but calling the
 			// Value.Type method on the variable is not safe
 			// in general. If the variable is an interface,

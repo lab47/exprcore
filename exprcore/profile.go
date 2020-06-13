@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package starlark
+package exprcore
 
-// This file defines a simple execution-time profiler for Starlark.
-// It measures the wall time spent executing Starlark code, and emits a
+// This file defines a simple execution-time profiler for exprcore.
+// It measures the wall time spent executing exprcore code, and emits a
 // gzipped protocol message in pprof format (github.com/google/pprof).
 //
 // When profiling is enabled, the interpreter calls the profiler to
 // indicate the start and end of each "span" or time interval. A leaf
-// function (whether Go or Starlark) has a single span. A function that
+// function (whether Go or exprcore) has a single span. A function that
 // calls another function has spans for each interval in which it is the
 // top of the stack. (A LOAD instruction also ends a span.)
 //
@@ -71,17 +71,17 @@ import (
 	"time"
 	"unsafe"
 
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/syntax"
 )
 
-// StartProfile enables time profiling of all Starlark threads,
+// StartProfile enables time profiling of all exprcore threads,
 // and writes a profile in pprof format to w.
 // It must be followed by a call to StopProfiler to stop
 // the profiler and finalize the profile.
 //
 // StartProfile returns an error if profiling was already enabled.
 //
-// StartProfile must not be called concurrently with Starlark execution.
+// StartProfile must not be called concurrently with exprcore execution.
 func StartProfile(w io.Writer) error {
 	if !atomic.CompareAndSwapUint32(&profiler.on, 0, 1) {
 		return fmt.Errorf("profiler already running")
@@ -105,7 +105,7 @@ func StartProfile(w io.Writer) error {
 // StartProfile and finalizes the profile. It returns an error if the
 // profile could not be completed.
 //
-// StopProfiler must not be called concurrently with Starlark execution.
+// StopProfiler must not be called concurrently with exprcore execution.
 func StopProfile() error {
 	// Terminate the profiler goroutine and get its result.
 	close(profiler.events)
@@ -180,7 +180,7 @@ type profEvent struct {
 
 type profFrame struct {
 	fn  Callable        // don't hold this live for too long (prevents GC of lambdas)
-	pc  uint32          // program counter (Starlark frames only)
+	pc  uint32          // program counter (exprcore frames only)
 	pos syntax.Position // position of pc within this frame
 }
 
@@ -285,12 +285,12 @@ func profile(w io.Writer) {
 	// locations
 	//
 	// location returns the ID of the location denoted by fr.
-	// For Starlark frames, this is the Frame pc.
+	// For exprcore frames, this is the Frame pc.
 	locationId := make(map[uintptr]uint64)
 	location := func(fr profFrame) uint64 {
 		fnAddr := profFuncAddr(fr.fn)
 
-		// For Starlark functions, the frame position
+		// For exprcore functions, the frame position
 		// represents the current PC value.
 		// Mix it into the low bits of the address.
 		// This is super hacky and may result in collisions
@@ -398,7 +398,7 @@ func profFuncAddr(fn Callable) uintptr {
 
 	// Address zero is reserved by the protocol.
 	// Use 1 for callables we don't recognize.
-	log.Printf("Starlark profiler: no address for Callable %T", fn)
+	log.Printf("exprcore profiler: no address for Callable %T", fn)
 	return 1
 }
 

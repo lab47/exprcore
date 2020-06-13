@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package starlark_test
+package exprcore_test
 
 import (
 	"bytes"
@@ -11,15 +11,15 @@ import (
 	"strings"
 	"testing"
 
-	"go.starlark.net/starlark"
-	"go.starlark.net/starlarktest"
+	"github.com/lab47/exprcore/exprcore"
+	"github.com/lab47/exprcore/exprcoretest"
 )
 
 func Benchmark(b *testing.B) {
 	defer setOptions("")
 
-	testdata := starlarktest.DataFile("starlark", ".")
-	thread := new(starlark.Thread)
+	testdata := exprcoretest.DataFile("exprcore", ".")
+	thread := new(exprcore.Thread)
 	for _, file := range []string{
 		"testdata/benchmark.star",
 		// ...
@@ -35,7 +35,7 @@ func Benchmark(b *testing.B) {
 		setOptions(string(src))
 
 		// Evaluate the file once.
-		globals, err := starlark.ExecFile(thread, filename, src, nil)
+		globals, err := exprcore.ExecFile(thread, filename, src, nil)
 		if err != nil {
 			reportEvalError(b, err)
 		}
@@ -43,10 +43,10 @@ func Benchmark(b *testing.B) {
 		// Repeatedly call each global function named bench_* as a benchmark.
 		for _, name := range globals.Keys() {
 			value := globals[name]
-			if fn, ok := value.(*starlark.Function); ok && strings.HasPrefix(name, "bench_") {
+			if fn, ok := value.(*exprcore.Function); ok && strings.HasPrefix(name, "bench_") {
 				b.Run(name, func(b *testing.B) {
 					for i := 0; i < b.N; i++ {
-						_, err := starlark.Call(thread, fn, nil, nil)
+						_, err := exprcore.Call(thread, fn, nil, nil)
 						if err != nil {
 							reportEvalError(b, err)
 						}
@@ -61,7 +61,7 @@ func Benchmark(b *testing.B) {
 // TODO(adonovan): use a bigger testdata program.
 func BenchmarkProgram(b *testing.B) {
 	// Measure time to read a source file (approx 600us but depends on hardware and file system).
-	filename := starlarktest.DataFile("starlark", "testdata/paths.star")
+	filename := exprcoretest.DataFile("exprcore", "testdata/paths.star")
 	var src []byte
 	b.Run("read", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -74,11 +74,11 @@ func BenchmarkProgram(b *testing.B) {
 	})
 
 	// Measure time to turn a source filename into a compiled program (approx 450us).
-	var prog *starlark.Program
+	var prog *exprcore.Program
 	b.Run("compile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			var err error
-			_, prog, err = starlark.SourceProgram(filename, src, starlark.StringDict(nil).Has)
+			_, prog, err = exprcore.SourceProgram(filename, src, exprcore.StringDict(nil).Has)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -102,7 +102,7 @@ func BenchmarkProgram(b *testing.B) {
 	b.Run("decode", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			in := bytes.NewReader(out.Bytes())
-			if _, err := starlark.CompiledProgram(in); err != nil {
+			if _, err := exprcore.CompiledProgram(in); err != nil {
 				b.Fatal(err)
 			}
 		}

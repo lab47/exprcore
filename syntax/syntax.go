@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package syntax provides a Starlark parser and abstract syntax tree.
-package syntax // import "go.starlark.net/syntax"
+// Package syntax provides a exprcore parser and abstract syntax tree.
+package syntax // import "github.com/lab47/exprcore/syntax"
 
-// A Node is a node in a Starlark syntax tree.
+// A Node is a node in a exprcore syntax tree.
 type Node interface {
 	// Span returns the start and end position of the expression.
 	Span() (start, end Position)
@@ -64,7 +64,7 @@ func End(n Node) Position {
 	return end
 }
 
-// A File represents a Starlark file.
+// A File represents a exprcore file.
 type File struct {
 	commentsRef
 	Path  string
@@ -82,7 +82,7 @@ func (x *File) Span() (start, end Position) {
 	return start, end
 }
 
-// A Stmt is a Starlark statement.
+// A Stmt is a exprcore statement.
 type Stmt interface {
 	Node
 	stmt()
@@ -167,7 +167,7 @@ func (x *IfStmt) Span() (start, end Position) {
 // load(Module, "x", y="foo").
 //
 // The AST is slightly unfaithful to the concrete syntax here because
-// Starlark's load statement, so that it can be implemented in Python,
+// exprcore's load statement, so that it can be implemented in Python,
 // binds some names (like y above) with an identifier and some (like x)
 // without.  For consistency we create fake identifiers for all the
 // strings.
@@ -213,7 +213,7 @@ func (x *ReturnStmt) Span() (start, end Position) {
 	return x.Return, end
 }
 
-// An Expr is a Starlark expression.
+// An Expr is a exprcore expression.
 type Expr interface {
 	Node
 	expr()
@@ -431,7 +431,7 @@ func (x *ProtoEntry) Span() (start, end Position) {
 // A LambdaExpr represents an inline function abstraction.
 //
 // Although they may be added in future, lambda expressions are not
-// currently part of the Starlark spec, so their use is controlled by the
+// currently part of the exprcore spec, so their use is controlled by the
 // resolver.AllowLambda flag.
 type LambdaExpr struct {
 	commentsRef

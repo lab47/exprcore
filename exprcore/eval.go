@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package starlark
+package exprcore
 
 import (
 	"fmt"
@@ -17,13 +17,13 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"go.starlark.net/internal/compile"
-	"go.starlark.net/internal/spell"
-	"go.starlark.net/resolve"
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/internal/compile"
+	"github.com/lab47/exprcore/internal/spell"
+	"github.com/lab47/exprcore/resolve"
+	"github.com/lab47/exprcore/syntax"
 )
 
-// A Thread contains the state of a Starlark thread,
+// A Thread contains the state of a exprcore thread,
 // such as its call stack and thread-local storage.
 // The Thread is threaded throughout the evaluator.
 type Thread struct {
@@ -33,7 +33,7 @@ type Thread struct {
 	// stack is the stack of (internal) call frames.
 	stack []*frame
 
-	// Print is the client-supplied implementation of the Starlark
+	// Print is the client-supplied implementation of the exprcore
 	// 'print' function. If nil, fmt.Fprintln(os.Stderr, msg) is
 	// used instead.
 	Print func(thread *Thread, msg string)
@@ -47,7 +47,7 @@ type Thread struct {
 	Load func(thread *Thread, module string) (StringDict, error)
 
 	// locals holds arbitrary "thread-local" Go values belonging to the client.
-	// They are accessible to the client but not to any Starlark program.
+	// They are accessible to the client but not to any exprcore program.
 	locals map[string]interface{}
 
 	// proftime holds the accumulated execution time since the last profile event.
@@ -69,7 +69,7 @@ func (thread *Thread) Local(key string) interface{} {
 }
 
 // CallFrame returns a copy of the specified frame of the callstack.
-// It should only be used in built-ins called from Starlark code.
+// It should only be used in built-ins called from exprcore code.
 // Depth 0 means the frame of the built-in itself, 1 is its caller, and so on.
 //
 // It is equivalent to CallStack().At(depth), but more efficient.
@@ -95,7 +95,7 @@ func (thread *Thread) CallStackDepth() int { return len(thread.stack) }
 
 // A StringDict is a mapping from names to values, and represents
 // an environment such as the global variables of a module.
-// It is not a true starlark.Value.
+// It is not a true exprcore.Value.
 type StringDict map[string]Value
 
 // Keys returns a new sorted slice of d's keys.
@@ -132,12 +132,12 @@ func (d StringDict) Freeze() {
 // Has reports whether the dictionary contains the specified key.
 func (d StringDict) Has(key string) bool { _, ok := d[key]; return ok }
 
-// A frame records a call to a Starlark function (including module toplevel)
+// A frame records a call to a exprcore function (including module toplevel)
 // or a built-in function or method.
 type frame struct {
 	callable  Callable // current function (or toplevel) or built-in
-	pc        uint32   // program counter (Starlark frames only)
-	locals    []Value  // local variables (Starlark frames only)
+	pc        uint32   // program counter (exprcore frames only)
+	locals    []Value  // local variables (exprcore frames only)
 	spanStart int64    // start time of current profiler span
 }
 
@@ -145,7 +145,7 @@ type frame struct {
 func (fr *frame) Position() syntax.Position {
 	switch c := fr.callable.(type) {
 	case *Function:
-		// Starlark function
+		// exprcore function
 		return c.funcode.Position(fr.pc)
 	case callableWithPosition:
 		// If a built-in Callable defines
@@ -185,7 +185,7 @@ func (stack CallStack) String() string {
 	return out.String()
 }
 
-// An EvalError is a Starlark evaluation error and
+// An EvalError is a exprcore evaluation error and
 // a copy of the thread's stack at the moment of the error.
 type EvalError struct {
 	Msg       string
@@ -225,7 +225,7 @@ func (e *EvalError) Backtrace() string {
 
 func (e *EvalError) Unwrap() error { return e.cause }
 
-// A Program is a compiled Starlark program.
+// A Program is a compiled exprcore program.
 //
 // Programs are immutable, and contain no Values.
 // A Program may be created by parsing a source file (see SourceProgram)
@@ -263,10 +263,10 @@ func (prog *Program) Write(out io.Writer) error {
 	return err
 }
 
-// ExecFile parses, resolves, and executes a Starlark file in the
+// ExecFile parses, resolves, and executes a exprcore file in the
 // specified global environment, which may be modified during execution.
 //
-// Thread is the state associated with the Starlark thread.
+// Thread is the state associated with the exprcore thread.
 //
 // The filename and src parameters are as for syntax.Parse:
 // filename is the name of the file to execute,
@@ -281,7 +281,7 @@ func (prog *Program) Write(out io.Writer) error {
 // If ExecFile fails during evaluation, it returns an *EvalError
 // containing a backtrace.
 func ExecFile(thread *Thread, filename string, src interface{}, predeclared StringDict) (StringDict, error) {
-	// Parse, resolve, and compile a Starlark source file.
+	// Parse, resolve, and compile a exprcore source file.
 	_, mod, err := SourceProgram(filename, src, predeclared.Has)
 	if err != nil {
 		return nil, err
@@ -293,7 +293,7 @@ func ExecFile(thread *Thread, filename string, src interface{}, predeclared Stri
 }
 
 // SourceProgram produces a new program by parsing, resolving,
-// and compiling a Starlark source file.
+// and compiling a exprcore source file.
 // On success, it returns the parsed file and the compiled program.
 // The filename and src parameters are as for syntax.Parse.
 //
@@ -311,7 +311,7 @@ func SourceProgram(filename string, src interface{}, isPredeclared func(string) 
 }
 
 // FileProgram produces a new program by resolving,
-// and compiling the Starlark source file syntax tree.
+// and compiling the exprcore source file syntax tree.
 // On success, it returns the compiled program.
 //
 // Resolving a syntax tree mutates it.
@@ -372,7 +372,7 @@ func (prog *Program) Init(thread *Thread, predeclared StringDict) (StringDict, e
 // syntactically a File, manipulates the same set of module globals,
 // which are not frozen after execution.
 //
-// This function is intended to support only go.starlark.net/repl.
+// This function is intended to support only github.com/lab47/exprcore/repl.
 // Its API stability is not guaranteed.
 func ExecREPLChunk(f *syntax.File, thread *Thread, globals StringDict) error {
 	var predeclared StringDict
@@ -418,7 +418,7 @@ func ExecREPLChunk(f *syntax.File, thread *Thread, globals StringDict) error {
 }
 
 func makeToplevelFunction(prog *compile.Program, predeclared StringDict) *Function {
-	// Create the Starlark value denoted by each program constant c.
+	// Create the exprcore value denoted by each program constant c.
 	constants := make([]Value, len(prog.Constants))
 	for i, c := range prog.Constants {
 		var v Value
@@ -1085,7 +1085,7 @@ func Call(thread *Thread, fn Value, args Tuple, kwargs []Tuple) (Value, error) {
 	result, err := c.CallInternal(thread, args, kwargs)
 	thread.endProfSpan()
 
-	// Sanity check: nil is not a valid Starlark value.
+	// Sanity check: nil is not a valid exprcore value.
 	if result == nil && err == nil {
 		err = fmt.Errorf("internal error: nil (not None) returned from %s", fn)
 	}
@@ -1361,7 +1361,7 @@ func findParam(params []compile.Binding, name string) int {
 	return -1
 }
 
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#string-interpolation
+// https://github.com/google/exprcore-go/blob/master/doc/spec.md#string-interpolation
 func interpolate(format string, x Value) (Value, error) {
 	buf := new(strings.Builder)
 	index := 0
@@ -1413,7 +1413,7 @@ func interpolate(format string, x Value) (Value, error) {
 			}
 		}
 
-		// NOTE: Starlark does not support any of these optional Python features:
+		// NOTE: exprcore does not support any of these optional Python features:
 		// - optional conversion flags: [#0- +], etc.
 		// - optional minimum field width (number or *).
 		// - optional precision (.123 or *)

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package starlarktest defines utilities for testing Starlark programs.
+// Package exprcoretest defines utilities for testing exprcore programs.
 //
 // Clients can call LoadAssertModule to load a module that defines
 // several functions useful for testing.  See assert.star for its
@@ -10,7 +10,7 @@
 //
 // The assert.error function, which reports errors to the current Go
 // testing.T, requires that clients call SetTest(thread, t) before use.
-package starlarktest // import "go.starlark.net/starlarktest"
+package exprcoretest // import "github.com/lab47/exprcore/exprcoretest"
 
 import (
 	"fmt"
@@ -21,8 +21,8 @@ import (
 	"strings"
 	"sync"
 
-	"go.starlark.net/starlark"
-	"go.starlark.net/starlarkstruct"
+	"github.com/lab47/exprcore/exprcore"
+	"github.com/lab47/exprcore/exprcorestruct"
 )
 
 const localKey = "Reporter"
@@ -34,74 +34,74 @@ type Reporter interface {
 }
 
 // SetReporter associates an error reporter (such as a testing.T in
-// a Go test) with the Starlark thread so that Starlark programs may
+// a Go test) with the exprcore thread so that exprcore programs may
 // report errors to it.
-func SetReporter(thread *starlark.Thread, r Reporter) {
+func SetReporter(thread *exprcore.Thread, r Reporter) {
 	thread.SetLocal(localKey, r)
 }
 
-// GetReporter returns the Starlark thread's error reporter.
+// GetReporter returns the exprcore thread's error reporter.
 // It must be preceded by a call to SetReporter.
-func GetReporter(thread *starlark.Thread) Reporter {
+func GetReporter(thread *exprcore.Thread) Reporter {
 	r, ok := thread.Local(localKey).(Reporter)
 	if !ok {
-		panic("internal error: starlarktest.SetReporter was not called")
+		panic("internal error: exprcoretest.SetReporter was not called")
 	}
 	return r
 }
 
 var (
 	once      sync.Once
-	assert    starlark.StringDict
+	assert    exprcore.StringDict
 	assertErr error
 )
 
 // LoadAssertModule loads the assert module.
 // It is concurrency-safe and idempotent.
-func LoadAssertModule() (starlark.StringDict, error) {
+func LoadAssertModule() (exprcore.StringDict, error) {
 	once.Do(func() {
-		predeclared := starlark.StringDict{
-			"error":   starlark.NewBuiltin("error", error_),
-			"catch":   starlark.NewBuiltin("catch", catch),
-			"matches": starlark.NewBuiltin("matches", matches),
-			"module":  starlark.NewBuiltin("module", starlarkstruct.MakeModule),
-			"_freeze": starlark.NewBuiltin("freeze", freeze),
+		predeclared := exprcore.StringDict{
+			"error":   exprcore.NewBuiltin("error", error_),
+			"catch":   exprcore.NewBuiltin("catch", catch),
+			"matches": exprcore.NewBuiltin("matches", matches),
+			"module":  exprcore.NewBuiltin("module", exprcorestruct.MakeModule),
+			"_freeze": exprcore.NewBuiltin("freeze", freeze),
 		}
-		filename := DataFile("starlarktest", "assert.star")
-		thread := new(starlark.Thread)
-		assert, assertErr = starlark.ExecFile(thread, filename, nil, predeclared)
+		filename := DataFile("exprcoretest", "assert.star")
+		thread := new(exprcore.Thread)
+		assert, assertErr = exprcore.ExecFile(thread, filename, nil, predeclared)
 	})
 	return assert, assertErr
 }
 
 // catch(f) evaluates f() and returns its evaluation error message
 // if it failed or None if it succeeded.
-func catch(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var fn starlark.Callable
-	if err := starlark.UnpackArgs("catch", args, kwargs, "fn", &fn); err != nil {
+func catch(thread *exprcore.Thread, _ *exprcore.Builtin, args exprcore.Tuple, kwargs []exprcore.Tuple) (exprcore.Value, error) {
+	var fn exprcore.Callable
+	if err := exprcore.UnpackArgs("catch", args, kwargs, "fn", &fn); err != nil {
 		return nil, err
 	}
-	if _, err := starlark.Call(thread, fn, nil, nil); err != nil {
-		return starlark.String(err.Error()), nil
+	if _, err := exprcore.Call(thread, fn, nil, nil); err != nil {
+		return exprcore.String(err.Error()), nil
 	}
-	return starlark.None, nil
+	return exprcore.None, nil
 }
 
 // matches(pattern, str) reports whether string str matches the regular expression pattern.
-func matches(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func matches(thread *exprcore.Thread, _ *exprcore.Builtin, args exprcore.Tuple, kwargs []exprcore.Tuple) (exprcore.Value, error) {
 	var pattern, str string
-	if err := starlark.UnpackArgs("matches", args, kwargs, "pattern", &pattern, "str", &str); err != nil {
+	if err := exprcore.UnpackArgs("matches", args, kwargs, "pattern", &pattern, "str", &str); err != nil {
 		return nil, err
 	}
 	ok, err := regexp.MatchString(pattern, str)
 	if err != nil {
 		return nil, fmt.Errorf("matches: %s", err)
 	}
-	return starlark.Bool(ok), nil
+	return exprcore.Bool(ok), nil
 }
 
 // error(x) reports an error to the Go test framework.
-func error_(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func error_(thread *exprcore.Thread, _ *exprcore.Builtin, args exprcore.Tuple, kwargs []exprcore.Tuple) (exprcore.Value, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("error: got %d arguments, want 1", len(args))
 	}
@@ -109,17 +109,17 @@ func error_(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, k
 	stk := thread.CallStack()
 	stk.Pop()
 	fmt.Fprintf(buf, "%sError: ", stk)
-	if s, ok := starlark.AsString(args[0]); ok {
+	if s, ok := exprcore.AsString(args[0]); ok {
 		buf.WriteString(s)
 	} else {
 		buf.WriteString(args[0].String())
 	}
 	GetReporter(thread).Error(buf.String())
-	return starlark.None, nil
+	return exprcore.None, nil
 }
 
 // freeze(x) freezes its operand.
-func freeze(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func freeze(thread *exprcore.Thread, _ *exprcore.Builtin, args exprcore.Tuple, kwargs []exprcore.Tuple) (exprcore.Value, error) {
 	if len(kwargs) > 0 {
 		return nil, fmt.Errorf("freeze does not accept keyword arguments")
 	}
@@ -142,8 +142,8 @@ var DataFile = func(pkgdir, filename string) string {
 	testSrcdir := os.Getenv("TEST_SRCDIR")
 	testWorkspace := os.Getenv("TEST_WORKSPACE")
 	if testSrcdir != "" && testWorkspace != "" {
-		return filepath.Join(testSrcdir, "net_starlark_go", pkgdir, filename)
+		return filepath.Join(testSrcdir, "net_exprcore_go", pkgdir, filename)
 	}
 
-	return filepath.Join(build.Default.GOPATH, "src/go.starlark.net", pkgdir, filename)
+	return filepath.Join(build.Default.GOPATH, "src/github.com/lab47/exprcore", pkgdir, filename)
 }

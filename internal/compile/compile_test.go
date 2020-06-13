@@ -5,15 +5,15 @@ import (
 	"strings"
 	"testing"
 
-	"go.starlark.net/starlark"
+	"github.com/lab47/exprcore/exprcore"
 )
 
 // TestSerialization verifies that a serialized program can be loaded,
 // deserialized, and executed.
 func TestSerialization(t *testing.T) {
-	predeclared := starlark.StringDict{
-		"x": starlark.String("mur"),
-		"n": starlark.MakeInt(2),
+	predeclared := exprcore.StringDict{
+		"x": exprcore.String("mur"),
+		"n": exprcore.MakeInt(2),
 	}
 	const src = `
 def mul(a, b) {
@@ -22,7 +22,7 @@ def mul(a, b) {
 
 y = mul(x, n)
 `
-	_, oldProg, err := starlark.SourceProgram("mul.star", src, predeclared.Has)
+	_, oldProg, err := exprcore.SourceProgram("mul.star", src, predeclared.Has)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,25 +32,25 @@ y = mul(x, n)
 		t.Fatalf("oldProg.WriteTo: %v", err)
 	}
 
-	newProg, err := starlark.CompiledProgram(buf)
+	newProg, err := exprcore.CompiledProgram(buf)
 	if err != nil {
 		t.Fatalf("CompiledProgram: %v", err)
 	}
 
-	thread := new(starlark.Thread)
+	thread := new(exprcore.Thread)
 	globals, err := newProg.Init(thread, predeclared)
 	if err != nil {
 		t.Fatalf("newProg.Init: %v", err)
 	}
-	if got, want := globals["y"], starlark.String("murmur"); got != want {
+	if got, want := globals["y"], exprcore.String("murmur"); got != want {
 		t.Errorf("Value of global was %s, want %s", got, want)
 		t.Logf("globals: %v", globals)
 	}
 
 	// Verify stack frame.
-	predeclared["n"] = starlark.None
+	predeclared["n"] = exprcore.None
 	_, err = newProg.Init(thread, predeclared)
-	evalErr, ok := err.(*starlark.EvalError)
+	evalErr, ok := err.(*exprcore.EvalError)
 	if !ok {
 		t.Fatalf("newProg.Init call returned err %v, want *EvalError", err)
 	}
@@ -64,8 +64,8 @@ Error: unknown binary op: string * NoneType`
 }
 
 func TestGarbage(t *testing.T) {
-	const garbage = "This is not a compiled Starlark program."
-	_, err := starlark.CompiledProgram(strings.NewReader(garbage))
+	const garbage = "This is not a compiled exprcore program."
+	_, err := exprcore.CompiledProgram(strings.NewReader(garbage))
 	if err == nil {
 		t.Fatalf("CompiledProgram did not report an error when decoding garbage")
 	}

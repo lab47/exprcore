@@ -4,7 +4,7 @@
 
 package syntax
 
-// A lexical scanner for Starlark.
+// A lexical scanner for exprcore.
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ import (
 	"unicode/utf8"
 )
 
-// A Token represents a Starlark lexical token.
+// A Token represents a exprcore lexical token.
 type Token int8
 
 const (
@@ -939,7 +939,7 @@ func (sc *scanner) scanString(val *tokenValue, quote rune) Token {
 }
 
 func (sc *scanner) scanNumber(val *tokenValue, c rune) Token {
-	// https://github.com/google/starlark-go/blob/master/doc/spec.md#lexical-elements
+	// https://github.com/google/exprcore-go/blob/master/doc/spec.md#lexical-elements
 	//
 	// Python features not supported:
 	// - integer literals of >64 bits of precision

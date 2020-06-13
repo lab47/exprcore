@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package starlarkstruct_test
+package exprcorestruct_test
 
 import (
 	"fmt"
 	"path/filepath"
 	"testing"
 
-	"go.starlark.net/resolve"
-	"go.starlark.net/starlark"
-	"go.starlark.net/starlarkstruct"
-	"go.starlark.net/starlarktest"
+	"github.com/lab47/exprcore/exprcore"
+	"github.com/lab47/exprcore/exprcorestruct"
+	"github.com/lab47/exprcore/exprcoretest"
+	"github.com/lab47/exprcore/resolve"
 )
 
 func init() {
@@ -24,16 +24,16 @@ func init() {
 }
 
 func Test(t *testing.T) {
-	testdata := starlarktest.DataFile("starlarkstruct", ".")
-	thread := &starlark.Thread{Load: load}
-	starlarktest.SetReporter(thread, t)
+	testdata := exprcoretest.DataFile("exprcorestruct", ".")
+	thread := &exprcore.Thread{Load: load}
+	exprcoretest.SetReporter(thread, t)
 	filename := filepath.Join(testdata, "testdata/struct.star")
-	predeclared := starlark.StringDict{
-		"struct": starlark.NewBuiltin("struct", starlarkstruct.Make),
-		"gensym": starlark.NewBuiltin("gensym", gensym),
+	predeclared := exprcore.StringDict{
+		"struct": exprcore.NewBuiltin("struct", exprcorestruct.Make),
+		"gensym": exprcore.NewBuiltin("gensym", gensym),
 	}
-	if _, err := starlark.ExecFile(thread, filename, nil, predeclared); err != nil {
-		if err, ok := err.(*starlark.EvalError); ok {
+	if _, err := exprcore.ExecFile(thread, filename, nil, predeclared); err != nil {
+		if err, ok := err.(*exprcore.EvalError); ok {
 			t.Fatal(err.Backtrace())
 		}
 		t.Fatal(err)
@@ -41,17 +41,17 @@ func Test(t *testing.T) {
 }
 
 // load implements the 'load' operation as used in the evaluator tests.
-func load(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+func load(thread *exprcore.Thread, module string) (exprcore.StringDict, error) {
 	if module == "assert.star" {
-		return starlarktest.LoadAssertModule()
+		return exprcoretest.LoadAssertModule()
 	}
 	return nil, fmt.Errorf("load not implemented")
 }
 
 // gensym is a built-in function that generates a unique symbol.
-func gensym(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func gensym(thread *exprcore.Thread, _ *exprcore.Builtin, args exprcore.Tuple, kwargs []exprcore.Tuple) (exprcore.Value, error) {
 	var name string
-	if err := starlark.UnpackArgs("gensym", args, kwargs, "name", &name); err != nil {
+	if err := exprcore.UnpackArgs("gensym", args, kwargs, "name", &name); err != nil {
 		return nil, err
 	}
 	return &symbol{name: name}, nil
@@ -61,18 +61,18 @@ func gensym(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, k
 // struct instances, like a class symbol in Python or a "provider" in Bazel.
 type symbol struct{ name string }
 
-var _ starlark.Callable = (*symbol)(nil)
+var _ exprcore.Callable = (*symbol)(nil)
 
 func (sym *symbol) Name() string          { return sym.name }
 func (sym *symbol) String() string        { return sym.name }
 func (sym *symbol) Type() string          { return "symbol" }
 func (sym *symbol) Freeze()               {} // immutable
-func (sym *symbol) Truth() starlark.Bool  { return starlark.True }
+func (sym *symbol) Truth() exprcore.Bool  { return exprcore.True }
 func (sym *symbol) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable: %s", sym.Type()) }
 
-func (sym *symbol) CallInternal(thread *starlark.Thread, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func (sym *symbol) CallInternal(thread *exprcore.Thread, args exprcore.Tuple, kwargs []exprcore.Tuple) (exprcore.Value, error) {
 	if len(args) > 0 {
 		return nil, fmt.Errorf("%s: unexpected positional arguments", sym)
 	}
-	return starlarkstruct.FromKeywords(sym, kwargs), nil
+	return exprcorestruct.FromKeywords(sym, kwargs), nil
 }

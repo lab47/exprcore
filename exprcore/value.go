@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package starlark provides a Starlark interpreter.
+// Package exprcore provides a exprcore interpreter.
 //
-// Starlark values are represented by the Value interface.
+// exprcore values are represented by the Value interface.
 // The following built-in Value types are known to the evaluator:
 //
 //      NoneType        -- NoneType
@@ -16,7 +16,7 @@
 //      Tuple           -- tuple
 //      *Dict           -- dict
 //      *Set            -- set
-//      *Function       -- function (implemented in Starlark)
+//      *Function       -- function (implemented in exprcore)
 //      *Builtin        -- builtin_function_or_method (function or method implemented in Go)
 //
 // Client applications may define new data types that satisfy at least
@@ -37,15 +37,15 @@
 //      HasUnary        -- value defines unary operations such as + and -
 //
 // Client applications may also define domain-specific functions in Go
-// and make them available to Starlark programs.  Use NewBuiltin to
+// and make them available to exprcore programs.  Use NewBuiltin to
 // construct a built-in value that wraps a Go function.  The
 // implementation of the Go function may use UnpackArgs to make sense of
 // the positional and keyword arguments provided by the caller.
 //
-// Starlark's None value is not equal to Go's nil. Go's nil is not a legal
-// Starlark value, but the compiler will not stop you from converting nil
+// exprcore's None value is not equal to Go's nil. Go's nil is not a legal
+// exprcore value, but the compiler will not stop you from converting nil
 // to Value. Be careful to avoid allowing Go nil values to leak into
-// Starlark data structures.
+// exprcore data structures.
 //
 // The Compare operation requires two arguments of the same
 // type, but this constraint cannot be expressed in Go's type system.
@@ -55,17 +55,17 @@
 // Use the package's standalone Compare (or Equal) function to compare
 // an arbitrary pair of values.
 //
-// To parse and evaluate a Starlark source file, use ExecFile.  The Eval
+// To parse and evaluate a exprcore source file, use ExecFile.  The Eval
 // function evaluates a single expression.  All evaluator functions
 // require a Thread parameter which defines the "thread-local storage"
-// of a Starlark thread and may be used to plumb application state
-// through Starlark code and into callbacks.  When evaluation fails it
+// of a exprcore thread and may be used to plumb application state
+// through exprcore code and into callbacks.  When evaluation fails it
 // returns an EvalError from which the application may obtain a
-// backtrace of active Starlark calls.
+// backtrace of active exprcore calls.
 //
-package starlark // import "go.starlark.net/starlark"
+package exprcore // import "github.com/lab47/exprcore/exprcore"
 
-// This file defines the data types of Starlark and their basic operations.
+// This file defines the data types of exprcore and their basic operations.
 
 import (
 	"fmt"
@@ -76,14 +76,14 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"go.starlark.net/internal/compile"
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/internal/compile"
+	"github.com/lab47/exprcore/syntax"
 )
 
-// Value is a value in the Starlark interpreter.
+// Value is a value in the exprcore interpreter.
 type Value interface {
 	// String returns the string representation of the value.
-	// Starlark string values are quoted as if by Python's repr.
+	// exprcore string values are quoted as if by Python's repr.
 	String() string
 
 	// Type returns a short string describing the value's type.
@@ -94,7 +94,7 @@ type Value interface {
 	// marked as frozen.  All subsequent mutations to the data
 	// structure through this API will fail dynamically, making the
 	// data structure immutable and safe for publishing to other
-	// Starlark interpreters running concurrently.
+	// exprcore interpreters running concurrently.
 	Freeze()
 
 	// Truth returns the truth value of an object.
@@ -103,7 +103,7 @@ type Value interface {
 	// Hash returns a function of x such that Equals(x, y) => Hash(x) == Hash(y).
 	// Hash may fail if the value's type is not hashable, or if the value
 	// contains a non-hashable value. The hash is used only by dictionaries and
-	// is not exposed to the Starlark program.
+	// is not exposed to the exprcore program.
 	Hash() (uint32, error)
 }
 
@@ -165,7 +165,7 @@ var (
 
 // An Iterable abstracts a sequence of values.
 // An iterable value may be iterated over by a 'for' loop or used where
-// any other Starlark iterable is allowed.  Unlike a Sequence, the length
+// any other exprcore iterable is allowed.  Unlike a Sequence, the length
 // of an Iterable is not necessarily known in advance of iteration.
 type Iterable interface {
 	Value
@@ -362,7 +362,7 @@ func (NoneType) CompareSameType(op syntax.Token, y Value, depth int) (bool, erro
 	return threeway(op, 0), nil
 }
 
-// Bool is the type of a Starlark bool.
+// Bool is the type of a exprcore bool.
 type Bool bool
 
 const (
@@ -386,7 +386,7 @@ func (x Bool) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, error
 	return threeway(op, b2i(bool(x))-b2i(bool(y))), nil
 }
 
-// Float is the type of a Starlark float.
+// Float is the type of a exprcore float.
 type Float float64
 
 func (f Float) String() string { return strconv.FormatFloat(float64(f), 'g', 6, 64) }
@@ -457,7 +457,7 @@ func (f Float) Unary(op syntax.Token) (Value, error) {
 	return nil, nil
 }
 
-// String is the type of a Starlark string.
+// String is the type of a exprcore string.
 //
 // A String encapsulates an an immutable sequence of bytes,
 // but strings are not directly iterable. Instead, iterate
@@ -465,10 +465,10 @@ func (f Float) Unary(op syntax.Token) (Value, error) {
 // codepoints, codepoint_ords, elems, elem_ords.
 //
 // Warning: the contract of the Value interface's String method is that
-// it returns the value printed in Starlark notation,
+// it returns the value printed in exprcore notation,
 // so s.String() or fmt.Sprintf("%s", s) returns a quoted string.
 // Use string(s) or s.GoString() or fmt.Sprintf("%#v", s) to obtain the raw contents
-// of a Starlark string as a Go string.
+// of a exprcore string as a Go string.
 type String string
 
 func (s String) String() string        { return strconv.Quote(string(s)) }
@@ -571,8 +571,8 @@ func (it *stringIterator) Next(p *Value) bool {
 
 func (*stringIterator) Done() {}
 
-// A Function is a function defined by a Starlark def statement or lambda expression.
-// The initialization behavior of a Starlark module is also represented by a Function.
+// A Function is a function defined by a exprcore def statement or lambda expression.
+// The initialization behavior of a exprcore module is also represented by a Function.
 type Function struct {
 	Prototype
 	funcode  *compile.Funcode
@@ -689,7 +689,7 @@ func (b *Builtin) BindReceiver(recv Value) *Builtin {
 	return &Builtin{name: b.name, fn: b.fn, recv: recv}
 }
 
-// A *Dict represents a Starlark dictionary.
+// A *Dict represents a exprcore dictionary.
 // The zero value of Dict is a valid empty dictionary.
 // If you know the exact final number of entries,
 // it is more efficient to call NewDict.
@@ -756,7 +756,7 @@ func dictsEqual(x, y *Dict, depth int) (bool, error) {
 	return true, nil
 }
 
-// A *List represents a Starlark list value.
+// A *List represents a exprcore list value.
 type List struct {
 	Prototype
 	elems     []Value
@@ -906,7 +906,7 @@ func (l *List) Clear() error {
 	return nil
 }
 
-// A Tuple represents a Starlark tuple value.
+// A Tuple represents a exprcore tuple value.
 type Tuple []Value
 
 func (t Tuple) Len() int          { return len(t) }
@@ -967,7 +967,7 @@ func (it *tupleIterator) Next(p *Value) bool {
 
 func (it *tupleIterator) Done() {}
 
-// A Set represents a Starlark set value.
+// A Set represents a exprcore set value.
 // The zero value of Set is a valid empty set.
 // If you know the exact final number of elements,
 // it is more efficient to call NewSet.
@@ -1158,7 +1158,7 @@ func pathContains(path []Value, x Value) bool {
 
 const maxdepth = 10
 
-// Equal reports whether two Starlark values are equal.
+// Equal reports whether two exprcore values are equal.
 func Equal(x, y Value) (bool, error) {
 	if x, ok := x.(String); ok {
 		return x == y, nil // fast path for an important special case
@@ -1166,7 +1166,7 @@ func Equal(x, y Value) (bool, error) {
 	return EqualDepth(x, y, maxdepth)
 }
 
-// EqualDepth reports whether two Starlark values are equal.
+// EqualDepth reports whether two exprcore values are equal.
 //
 // Recursive comparisons by implementations of Value.CompareSameType
 // should use EqualDepth to prevent infinite recursion.
@@ -1174,7 +1174,7 @@ func EqualDepth(x, y Value, depth int) (bool, error) {
 	return CompareDepth(syntax.EQL, x, y, depth)
 }
 
-// Compare compares two Starlark values.
+// Compare compares two exprcore values.
 // The comparison operation must be one of EQL, NEQ, LT, LE, GT, or GE.
 // Compare returns an error if an ordered comparison was
 // requested for a type that does not support it.
@@ -1185,7 +1185,7 @@ func Compare(op syntax.Token, x, y Value) (bool, error) {
 	return CompareDepth(op, x, y, maxdepth)
 }
 
-// CompareDepth compares two Starlark values.
+// CompareDepth compares two exprcore values.
 // The comparison operation must be one of EQL, NEQ, LT, LE, GT, or GE.
 // CompareDepth returns an error if an ordered comparison was
 // requested for a pair of values that do not support it.

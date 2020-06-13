@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/syntax"
 )
 
 func TestWalk(t *testing.T) {
@@ -70,7 +70,7 @@ File
 }
 
 // ExampleWalk demonstrates the use of Walk to
-// enumerate the identifiers in a Starlark source file
+// enumerate the identifiers in a exprcore source file
 // containing a nonsense program with varied grammar.
 func ExampleWalk() {
 	const src = `

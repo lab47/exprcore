@@ -1,6 +1,6 @@
-package starlark
+package exprcore
 
-import "go.starlark.net/syntax"
+import "github.com/lab47/exprcore/syntax"
 
 // This file defines an experimental API for the debugging tools.
 // Some of these declarations expose details of internal packages.
@@ -11,7 +11,7 @@ import "go.starlark.net/syntax"
 // It may be nil if not yet assigned.
 //
 // Local may be called only for frames whose Callable is a *Function (a
-// function defined by Starlark source code), and only while the frame
+// function defined by exprcore source code), and only while the frame
 // is active; it will panic otherwise.
 //
 // This function is provided only for debugging tools.
@@ -29,7 +29,7 @@ func (fr *frame) Local(i int) Value { return fr.locals[i] }
 // but not limited to retention of object that would otherwise be garbage.
 type DebugFrame interface {
 	Callable() Callable        // returns the frame's function
-	Local(i int) Value         // returns the value of the (Starlark) frame's ith local variable
+	Local(i int) Value         // returns the value of the (exprcore) frame's ith local variable
 	Position() syntax.Position // returns the current position of execution in this frame
 }
 

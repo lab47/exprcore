@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package starlark_test
+package exprcore_test
 
 // This file defines tests of the Value API.
 
@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"testing"
 
-	"go.starlark.net/starlark"
+	"github.com/lab47/exprcore/exprcore"
 )
 
 func TestStringMethod(t *testing.T) {
-	s := starlark.String("hello")
+	s := exprcore.String("hello")
 	for i, test := range [][2]string{
 		// quoted string:
 		{s.String(), `"hello"`},
@@ -34,11 +34,11 @@ func TestStringMethod(t *testing.T) {
 }
 
 func TestListAppend(t *testing.T) {
-	l := starlark.NewList(nil)
-	l.Append(starlark.String("hello"))
-	res, ok := starlark.AsString(l.Index(0))
+	l := exprcore.NewList(nil)
+	l.Append(exprcore.String("hello"))
+	res, ok := exprcore.AsString(l.Index(0))
 	if !ok {
-		t.Errorf("failed list.Append() got: %s, want: starlark.String", l.Index(0).Type())
+		t.Errorf("failed list.Append() got: %s, want: exprcore.String", l.Index(0).Type())
 	}
 	if res != "hello" {
 		t.Errorf("failed list.Append() got: %+v, want: hello", res)

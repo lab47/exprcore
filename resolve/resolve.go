@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package resolve defines a name-resolution pass for Starlark abstract
+// Package resolve defines a name-resolution pass for exprcore abstract
 // syntax trees.
 //
 // The resolver sets the Locals and FreeVars arrays of each DefStmt and
@@ -10,7 +10,7 @@
 // free variable.  It also sets the Locals array of a File for locals
 // bound by top-level comprehensions and load statements.
 // Identifiers for global variables do not get an index.
-package resolve // import "go.starlark.net/resolve"
+package resolve // import "github.com/lab47/exprcore/resolve"
 
 // All references to names are statically resolved.  Names may be
 // predeclared, global, or local to a function or file.
@@ -51,9 +51,9 @@ package resolve // import "go.starlark.net/resolve"
 // function. At that point, we can distinguish local from top-level names
 // (and this is when Python would compute free variables).
 //
-// However, Starlark additionally requires that all references to global
+// However, exprcore additionally requires that all references to global
 // names are satisfied by some declaration in the current module;
-// Starlark permits a function to forward-reference a global or file-local
+// exprcore permits a function to forward-reference a global or file-local
 // that has not
 // been declared yet so long as it is declared before the end of the
 // module.  So, instead of re-resolving the unresolved references after
@@ -72,7 +72,7 @@ package resolve // import "go.starlark.net/resolve"
 // and comprehensions) in a similar way and compute the file's set of
 // local variables.
 //
-// Starlark enforces that all global names are assigned at most once on
+// exprcore enforces that all global names are assigned at most once on
 // all control flow paths by forbidding if/else statements and loops at
 // top level. A global may be used before it is defined, leading to a
 // dynamic error. However, the AllowGlobalReassign flag (really: allow
@@ -87,15 +87,15 @@ import (
 	"sort"
 	"strings"
 
-	"go.starlark.net/internal/spell"
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/internal/spell"
+	"github.com/lab47/exprcore/syntax"
 )
 
 const debug = false
-const doesnt = "this Starlark dialect does not "
+const doesnt = "this exprcore dialect does not "
 
 // global options
-// These features are either not standard Starlark (yet), or deprecated
+// These features are either not standard exprcore (yet), or deprecated
 // features of the BUILD language, so we put them behind flags.
 var (
 	AllowNestedDef      = false // allow def statements within function bodies
@@ -115,11 +115,11 @@ var (
 // a pre-declared identifier (visible in the current module) or a
 // universal identifier (visible in every module).
 // Clients should typically pass predeclared.Has for the first and
-// starlark.Universe.Has for the second, where predeclared is the
-// module's StringDict of predeclared names and starlark.Universe is the
+// exprcore.Universe.Has for the second, where predeclared is the
+// module's StringDict of predeclared names and exprcore.Universe is the
 // standard set of built-ins.
 // The isUniverse predicate is supplied a parameter to avoid a cyclic
-// dependency upon starlark.Universe, not because users should ever need
+// dependency upon exprcore.Universe, not because users should ever need
 // to redefine it.
 func File(file *syntax.File, isPredeclared, isUniversal func(name string) bool) error {
 	return REPLChunk(file, nil, isPredeclared, isUniversal)

@@ -1,5 +1,5 @@
-// Package compile defines the Starlark bytecode compiler.
-// It is an internal package of the Starlark interpreter and is not directly accessible to clients.
+// Package compile defines the exprcore bytecode compiler.
+// It is an internal package of the exprcore interpreter and is not directly accessible to clients.
 //
 // The compiler generates byte code with optional uint32 operands for a
 // virtual machine with the following components:
@@ -24,7 +24,7 @@
 // Operands, logically uint32s, are encoded using little-endian 7-bit
 // varints, the top bit indicating that more bytes follow.
 //
-package compile // import "go.starlark.net/internal/compile"
+package compile // import "github.com/lab47/exprcore/internal/compile"
 
 import (
 	"bytes"
@@ -35,8 +35,8 @@ import (
 	"strconv"
 	"sync"
 
-	"go.starlark.net/resolve"
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/resolve"
+	"github.com/lab47/exprcore/syntax"
 )
 
 // Disassemble causes the assembly code for each function
@@ -306,7 +306,7 @@ func (op Opcode) String() string {
 	return fmt.Sprintf("illegal op (%d)", op)
 }
 
-// A Program is a Starlark file in executable form.
+// A Program is a exprcore file in executable form.
 //
 // Programs are serialized by the Program.Encode method,
 // which must be updated whenever this declaration is changed.
@@ -319,7 +319,7 @@ type Program struct {
 	Toplevel  *Funcode  // module initialization function
 }
 
-// A Funcode is the code of a compiled Starlark function.
+// A Funcode is the code of a compiled exprcore function.
 //
 // Funcodes are serialized by the encoder.function method,
 // which must be updated whenever this declaration is changed.
@@ -926,7 +926,7 @@ func (fcomp *fcomp) emit1(op Opcode, arg uint32) {
 // On return, the current block is unset.
 func (fcomp *fcomp) jump(b *block) {
 	if b == fcomp.block {
-		panic("self-jump") // unreachable: Starlark has no arbitrary looping constructs
+		panic("self-jump") // unreachable: exprcore has no arbitrary looping constructs
 	}
 	fcomp.block.jmp = b
 	fcomp.block = nil
@@ -1711,11 +1711,11 @@ func (fcomp *fcomp) args(call *syntax.CallExpr) (op Opcode, arg uint32) {
 	// They also differ in their evaluation order:
 	//  Python2: 1 2 3 5 4 6 (*args and **kwargs evaluated last)
 	//  Python3: 1 2 4 3 5 6 (positional args evaluated before named args)
-	// Starlark-in-Java historically used a third order:
+	// exprcore-in-Java historically used a third order:
 	//  Lexical: 1 2 3 4 5 6 (all args evaluated left-to-right)
 	//
-	// After discussion in github.com/bazelbuild/starlark#13, the
-	// spec now requires Starlark to statically reject named
+	// After discussion in github.com/bazelbuild/exprcore#13, the
+	// spec now requires exprcore to statically reject named
 	// arguments after *args (e.g. y=5), and to use Python2-style
 	// evaluation order. This is both easy to implement and
 	// consistent with lexical order:

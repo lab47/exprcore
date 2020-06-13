@@ -1,4 +1,4 @@
-module go.starlark.net
+module github.com/lab47/exprcore
 
 go 1.13
 

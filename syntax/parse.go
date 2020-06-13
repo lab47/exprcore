@@ -4,8 +4,8 @@
 
 package syntax
 
-// This file defines a recursive-descent parser for Starlark.
-// The LL(1) grammar of Starlark and the names of many productions follow Python 2.7.
+// This file defines a recursive-descent parser for exprcore.
+// The LL(1) grammar of exprcore and the names of many productions follow Python 2.7.
 //
 // TODO(adonovan): use syntax.Error more systematically throughout the
 // package.  Verify that error positions are correct using the
@@ -85,7 +85,7 @@ func ParseCompoundStmt(filename string, readline func() ([]byte, error)) (f *Fil
 	return &File{Path: filename, Stmts: stmts}, nil
 }
 
-// ParseExpr parses a Starlark expression.
+// ParseExpr parses a exprcore expression.
 // A comma-separated list of expressions is parsed as a tuple.
 // See Parse for explanation of parameters.
 func ParseExpr(filename string, src interface{}, mode Mode) (expr Expr, err error) {
@@ -703,7 +703,7 @@ var precedence [maxToken]int8
 // preclevels groups operators of equal precedence.
 // Comparisons are nonassociative; other binary operators associate to the left.
 // Unary MINUS, unary PLUS, and TILDE have higher precedence so are handled in parsePrimary.
-// See https://github.com/google/starlark-go/blob/master/doc/spec.md#binary-operators
+// See https://github.com/google/exprcore-go/blob/master/doc/spec.md#binary-operators
 var preclevels = [...][]Token{
 	{OR},                                   // or
 	{AND},                                  // and

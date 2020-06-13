@@ -4,7 +4,7 @@
 
 package syntax
 
-// Starlark quoted string utilities.
+// exprcore quoted string utilities.
 
 import (
 	"fmt"
@@ -120,7 +120,7 @@ func unquote(quoted string) (s string, triple bool, err error) {
 
 		switch quoted[1] {
 		default:
-			// In Starlark, like Go, a backslash must escape something.
+			// In exprcore, like Go, a backslash must escape something.
 			// (Python still treats unnecessary backslashes literally,
 			// but since 3.6 has emitted a deprecation warning.)
 			err = fmt.Errorf("invalid escape sequence \\%c", quoted[1])

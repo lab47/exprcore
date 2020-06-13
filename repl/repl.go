@@ -1,4 +1,4 @@
-// Package repl provides a read/eval/print loop for Starlark.
+// Package repl provides a read/eval/print loop for exprcore.
 //
 // It supports readline-style command editing,
 // and interrupts through Control-C.
@@ -10,7 +10,7 @@
 // expression. If the input still cannot be parsed as an expression,
 // the REPL parses and executes it as a file (a list of statements),
 // for side effects.
-package repl // import "go.starlark.net/repl"
+package repl // import "github.com/lab47/exprcore/repl"
 
 import (
 	"context"
@@ -20,21 +20,21 @@ import (
 	"os/signal"
 
 	"github.com/chzyer/readline"
-	"go.starlark.net/resolve"
-	"go.starlark.net/starlark"
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/exprcore"
+	"github.com/lab47/exprcore/resolve"
+	"github.com/lab47/exprcore/syntax"
 )
 
 var interrupted = make(chan os.Signal, 1)
 
 // REPL executes a read, eval, print loop.
 //
-// Before evaluating each expression, it sets the Starlark thread local
+// Before evaluating each expression, it sets the exprcore thread local
 // variable named "context" to a context.Context that is cancelled by a
 // SIGINT (Control-C). Client-supplied global functions may use this
 // context to make long-running operations interruptable.
 //
-func REPL(thread *starlark.Thread, globals starlark.StringDict) {
+func REPL(thread *exprcore.Thread, globals exprcore.StringDict) {
 	signal.Notify(interrupted, os.Interrupt)
 	defer signal.Stop(interrupted)
 
@@ -59,8 +59,8 @@ func REPL(thread *starlark.Thread, globals starlark.StringDict) {
 // rep reads, evaluates, and prints one item.
 //
 // It returns an error (possibly readline.ErrInterrupt)
-// only if readline failed. Starlark errors are printed.
-func rep(rl *readline.Instance, thread *starlark.Thread, globals starlark.StringDict) error {
+// only if readline failed. exprcore errors are printed.
+func rep(rl *readline.Instance, thread *exprcore.Thread, globals exprcore.StringDict) error {
 	// Each item gets its own context,
 	// which is cancelled by a SIGINT.
 	//
@@ -105,7 +105,7 @@ func rep(rl *readline.Instance, thread *starlark.Thread, globals starlark.String
 	}
 
 	// Treat load bindings as global (like they used to be) in the REPL.
-	// This is a workaround for github.com/google/starlark-go/issues/224.
+	// This is a workaround for github.com/google/exprcore-go/issues/224.
 	// TODO(adonovan): not safe wrt concurrent interpreters.
 	// Come up with a more principled solution (or plumb options everywhere).
 	defer func(prev bool) { resolve.LoadBindsGlobally = prev }(resolve.LoadBindsGlobally)
@@ -113,17 +113,17 @@ func rep(rl *readline.Instance, thread *starlark.Thread, globals starlark.String
 
 	if expr := soleExpr(f); expr != nil {
 		// eval
-		v, err := starlark.EvalExpr(thread, expr, globals)
+		v, err := exprcore.EvalExpr(thread, expr, globals)
 		if err != nil {
 			PrintError(err)
 			return nil
 		}
 
 		// print
-		if v != starlark.None {
+		if v != exprcore.None {
 			fmt.Println(v)
 		}
-	} else if err := starlark.ExecREPLChunk(f, thread, globals); err != nil {
+	} else if err := exprcore.ExecREPLChunk(f, thread, globals); err != nil {
 		PrintError(err)
 		return nil
 	}
@@ -141,9 +141,9 @@ func soleExpr(f *syntax.File) syntax.Expr {
 }
 
 // PrintError prints the error to stderr,
-// or its backtrace if it is a Starlark evaluation error.
+// or its backtrace if it is a exprcore evaluation error.
 func PrintError(err error) {
-	if evalErr, ok := err.(*starlark.EvalError); ok {
+	if evalErr, ok := err.(*exprcore.EvalError); ok {
 		fmt.Fprintln(os.Stderr, evalErr.Backtrace())
 	} else {
 		fmt.Fprintln(os.Stderr, err)
@@ -153,15 +153,15 @@ func PrintError(err error) {
 // MakeLoad returns a simple sequential implementation of module loading
 // suitable for use in the REPL.
 // Each function returned by MakeLoad accesses a distinct private cache.
-func MakeLoad() func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+func MakeLoad() func(thread *exprcore.Thread, module string) (exprcore.StringDict, error) {
 	type entry struct {
-		globals starlark.StringDict
+		globals exprcore.StringDict
 		err     error
 	}
 
 	var cache = make(map[string]*entry)
 
-	return func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+	return func(thread *exprcore.Thread, module string) (exprcore.StringDict, error) {
 		e, ok := cache[module]
 		if e == nil {
 			if ok {
@@ -173,8 +173,8 @@ func MakeLoad() func(thread *starlark.Thread, module string) (starlark.StringDic
 			cache[module] = nil
 
 			// Load it.
-			thread := &starlark.Thread{Name: "exec " + module, Load: thread.Load}
-			globals, err := starlark.ExecFile(thread, module, nil, nil)
+			thread := &exprcore.Thread{Name: "exec " + module, Load: thread.Load}
+			globals, err := exprcore.ExecFile(thread, module, nil, nil)
 			e = &entry{globals, err}
 
 			// Update the cache.

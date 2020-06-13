@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package starlark
+package exprcore
 
 import (
 	"fmt"
@@ -10,10 +10,10 @@ import (
 	"math/big"
 	"strconv"
 
-	"go.starlark.net/syntax"
+	"github.com/lab47/exprcore/syntax"
 )
 
-// Int is the type of a Starlark int.
+// Int is the type of a exprcore int.
 type Int struct {
 	// We use only the signed 32 bit range of small to ensure
 	// that small+small and small*small do not overflow.
@@ -26,7 +26,7 @@ type Int struct {
 func newBig(x int64) *big.Int {
 	if 0 <= x && int64(big.Word(x)) == x {
 		// x is guaranteed to fit into a single big.Word.
-		// Most starlark ints are small,
+		// Most exprcore ints are small,
 		// but math/big assumes that since you've chosen to use math/big,
 		// your big.Ints will probably grow, so it over-allocates.
 		// Avoid that over-allocation by manually constructing a single-word slice.
@@ -36,10 +36,10 @@ func newBig(x int64) *big.Int {
 	return big.NewInt(x)
 }
 
-// MakeInt returns a Starlark int for the specified signed integer.
+// MakeInt returns a exprcore int for the specified signed integer.
 func MakeInt(x int) Int { return MakeInt64(int64(x)) }
 
-// MakeInt64 returns a Starlark int for the specified int64.
+// MakeInt64 returns a exprcore int for the specified int64.
 func MakeInt64(x int64) Int {
 	if math.MinInt32 <= x && x <= math.MaxInt32 {
 		return Int{small: x}
@@ -47,10 +47,10 @@ func MakeInt64(x int64) Int {
 	return Int{big: newBig(x)}
 }
 
-// MakeUint returns a Starlark int for the specified unsigned integer.
+// MakeUint returns a exprcore int for the specified unsigned integer.
 func MakeUint(x uint) Int { return MakeUint64(uint64(x)) }
 
-// MakeUint64 returns a Starlark int for the specified uint64.
+// MakeUint64 returns a exprcore int for the specified uint64.
 func MakeUint64(x uint64) Int {
 	if x <= math.MaxInt32 {
 		return Int{small: int64(x)}
@@ -62,7 +62,7 @@ func MakeUint64(x uint64) Int {
 	return Int{big: new(big.Int).SetUint64(x)}
 }
 
-// MakeBigInt returns a Starlark int for the specified big.Int.
+// MakeBigInt returns a exprcore int for the specified big.Int.
 // The caller must not subsequently modify x.
 func MakeBigInt(x *big.Int) Int {
 	if n := x.BitLen(); n < 32 || n == 32 && x.Int64() == math.MinInt32 {
