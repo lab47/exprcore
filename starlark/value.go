@@ -1116,7 +1116,7 @@ func writeValue(out *strings.Builder, x Value, path []Value) {
 		}
 
 	case *Dict:
-		out.WriteByte('{')
+		out.WriteString("%{")
 		if pathContains(path, x) {
 			out.WriteString("...") // dict contains itself
 		} else {

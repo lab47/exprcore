@@ -143,21 +143,21 @@ assert.eq("hello", "he"+"llo")
 assert.ne("hello", "Hello")
 
 # hash must follow java.lang.String.hashCode.
-wanthash = {
+wanthash = %{
     "": 0,
     "\0" * 100: 0,
     "hello": 99162322,
     "world": 113318802,
     "Hello, 世界!": 417292677,
 }
-gothash = {s: hash(s) for s in wanthash}
+gothash = %{s: hash(s) for s in wanthash}
 assert.eq(gothash, wanthash)
 
 # TODO(adonovan): ordered comparisons
 
 # string % tuple formatting
 assert.eq("A %d %x Z" % (123, 456), "A 123 1c8 Z")
-assert.eq("A %(foo)d %(bar)s Z" % {"foo": 123, "bar":"hi"}, "A 123 hi Z")
+assert.eq("A %(foo)d %(bar)s Z" % %{"foo": 123, "bar":"hi"}, "A 123 hi Z")
 assert.eq("%s %r" % ("hi", "hi"), 'hi "hi"') # TODO(adonovan): use ''-quotation
 assert.eq("%%d %d" % 1, "%d 1")
 assert.fails(=> "%d %d" % 1, "not enough arguments for format string")
@@ -351,7 +351,7 @@ assert.eq('?'.join(["foo", "a/b/c.go".rpartition("/")[0]]), 'foo?a/b')
 # str.is{alpha,...}
 def test_predicates() {
   predicates = ["alnum", "alpha", "digit", "lower", "space", "title", "upper"]
-  table = {
+  table = %{
       "Hello, World!": "title",
       "hello, world!": "lower",
       "base64": "alnum lower",

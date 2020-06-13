@@ -35,7 +35,7 @@ assert.eq(list(set("hello".elems())), ["h", "e", "l", "o"])
 assert.eq(list(set(range(3))), [0, 1, 2])
 assert.fails(=> set(1), "got int, want iterable")
 assert.fails(=> set(1, 2, 3), "got 3 arguments")
-assert.fails(=> set([1, 2, {}]), "unhashable type: dict")
+assert.fails(=> set([1, 2, %{}]), "unhashable type: dict")
 
 # truth
 assert.true(not set())
@@ -65,7 +65,7 @@ assert.eq(type(x.union(y)), "set")
 assert.eq(list(x.union(y)), [1, 2, 3, 4, 5])
 assert.eq(list(x.union([5, 1])), [1, 2, 3, 5])
 assert.eq(list(x.union((6, 5, 4))), [1, 2, 3, 6, 5, 4])
-assert.fails(=> x.union([1, 2, {}]), "unhashable type: dict")
+assert.fails(=> x.union([1, 2, %{}]), "unhashable type: dict")
 
 # intersection, set & set (use resolve.AllowBitwise to enable it)
 assert.eq(list(set("a".elems()) & set("b".elems())), [])

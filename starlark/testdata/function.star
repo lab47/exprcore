@@ -213,7 +213,7 @@ def f(*args, **kwargs) {
   return args, kwargs
 }
 
-assert.eq(f(x=1, y=2), ((), {"x": 1, "y": 2}))
+assert.eq(f(x=1, y=2), ((), %{"x": 1, "y": 2}))
 assert.fails(=> f(x=1, **dict(x=2)), 'multiple values for parameter "x"')
 
 def g(x, y) {
@@ -221,7 +221,7 @@ def g(x, y) {
 }
 
 assert.eq(g(1, y=2), (1, 2))
-assert.fails(=> g(1, y=2, **{'y': 3}), 'multiple values for parameter "y"')
+assert.fails(=> g(1, y=2, **%{'y': 3}), 'multiple values for parameter "y"')
 
 ---
 # Regression test for a bug in CALL_VAR_KW.

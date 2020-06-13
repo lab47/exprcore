@@ -897,10 +897,10 @@ func (p *parser) parsePrimary(ec exprContext) Expr {
 		return p.parseList()
 
 	case LBRACE:
-		return p.parseDict(ec)
+		return p.parseProto(ec)
 
 	case PERCENT_BRACE:
-		return p.parseProto(ec)
+		return p.parseDict(ec)
 
 	case STARSTAR:
 		if !ec.allowParams {
@@ -1084,7 +1084,7 @@ func (p *parser) parseList() Expr {
 	return &ListExpr{Lbrack: lbrack, List: exprs, Rbrack: rbrack}
 }
 
-// proto = '%{' '}'
+// proto = '{' '}'
 //       | '{' proto_entry_list '}'
 func (p *parser) parseProto(ec exprContext) Expr {
 	lbrace := p.nextToken()
@@ -1122,9 +1122,9 @@ func (p *parser) parseProtoEntry(ec exprContext) *ProtoEntry {
 	return &ProtoEntry{Key: k, Colon: colon, Value: &ExprStmt{X: v}}
 }
 
-// dict = '{' '}'
-//      | '{' dict_entry_list '}'
-//      | '{' dict_entry FOR loop_variables IN expr '}'
+// dict = '%{' '}'
+//      | '%{' dict_entry_list '}'
+//      | '%{' dict_entry FOR loop_variables IN expr '}'
 func (p *parser) parseDict(ec exprContext) Expr {
 	lbrace := p.nextToken()
 	if p.tok == RBRACE {

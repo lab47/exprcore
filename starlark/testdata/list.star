@@ -68,8 +68,8 @@ assert.eq(
 assert.eq([(x, y) for x in [1, 2] if x == 2 for y in [3, 4]], [(2, 3), (2, 4)])
 assert.eq([2 * x for x in (1, 2, 3)], [2, 4, 6])
 assert.eq([x for x in "abc".elems()], ["a", "b", "c"])
-assert.eq([x for x in {"a": 1, "b": 2}], ["a", "b"])
-assert.eq([(y, x) for x, y in {1: 2, 3: 4}.items()], [(2, 1), (4, 3)])
+assert.eq([x for x in %{"a": 1, "b": 2}], ["a", "b"])
+assert.eq([(y, x) for x, y in %{1: 2, 3: 4}.items()], [(2, 1), (4, 3)])
 
 # corner cases of parsing:
 assert.eq([x for x in range(12) if x % 2 == 0 if x % 3 == 0], [0, 6])

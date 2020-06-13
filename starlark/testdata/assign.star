@@ -77,11 +77,11 @@ def assignment() {
   a[-2] = 2
   assert.eq(a, [1, 2, 3])
   assert.eq("%d %d" % (5, 7), "5 7")
-  x={}
+  x=%{}
   x[1] = 2
   x[1] += 3
   assert.eq(x[1], 5)
-  def f12() { x[(1, "abc", {})] = 1 }
+  def f12() { x[(1, "abc", %{})] = 1 }
   assert.fails(f12, "unhashable type: dict")
 }
 assignment()
@@ -290,13 +290,13 @@ def f() {
 assert.eq(f(), [("a", "b", 3), ("c", "d", 4)])
 
 def g() {
-  a = {}
+  a = %{}
   for i, a[i] in [("one", 1), ("two", 2)] {
     pass
   }
   return a
 }
-assert.eq(g(), {"one": 1, "two": 2})
+assert.eq(g(), %{"one": 1, "two": 2})
 
 ---
 # parenthesized LHS in augmented assignment (success)

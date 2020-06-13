@@ -69,15 +69,15 @@ assert.fails(=> cyclic2 == cyclic, "maximum recursion")
 cyclic3 = [1, [2, 3]] # list-list cycle
 cyclic3[1][0] = cyclic3
 assert.eq(str(cyclic3), "[1, [[...], 3]]")
-cyclic4 = {"x": 1}
+cyclic4 = %{"x": 1}
 cyclic4["x"] = cyclic4
-assert.eq(str(cyclic4), "{\"x\": {...}}")
-cyclic5 = [0, {"x": 1}] # list-dict cycle
+assert.eq(str(cyclic4), "%{\"x\": %{...}}")
+cyclic5 = [0, %{"x": 1}] # list-dict cycle
 cyclic5[1]["x"] = cyclic5
-assert.eq(str(cyclic5), "[0, {\"x\": [...]}]")
-assert.eq(str(cyclic5), "[0, {\"x\": [...]}]")
+assert.eq(str(cyclic5), "[0, %{\"x\": [...]}]")
+assert.eq(str(cyclic5), "[0, %{\"x\": [...]}]")
 assert.fails(=> cyclic5 == cyclic5 ,"maximum recursion")
-cyclic6 = [0, {"x": 1}]
+cyclic6 = [0, %{"x": 1}]
 cyclic6[1]["x"] = cyclic6
 assert.fails(=> cyclic5 == cyclic6, "maximum recursion")
 
@@ -98,7 +98,7 @@ assert.eq(1 + \
 ---
 # A regression test for error position information.
 
-_ = {}.get(1, default=2) ### "get: unexpected keyword arguments"
+_ = %{}.get(1, default=2) ### "get: unexpected keyword arguments"
 
 ---
 # Load exposes explicitly declared globals from other modules.

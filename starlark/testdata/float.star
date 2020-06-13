@@ -124,9 +124,9 @@ assert.ne(nanlist, nanlist)
 
 # Since NaN values never compare equal,
 # a dict may have any number of NaN keys.
-nandict = {nan: 1, nan: 2, nan: 3}
+nandict = %{nan: 1, nan: 2, nan: 3}
 assert.eq(len(nandict), 3)
-assert.eq(str(nandict), "{NaN: 1, NaN: 2, NaN: 3}")
+assert.eq(str(nandict), "%{NaN: 1, NaN: 2, NaN: 3}")
 assert.true(nan not in nandict)
 assert.eq(nandict.get(nan, None), None)
 
@@ -207,8 +207,8 @@ def checkhash() {
       f = float(b)
       i = int(b)
       if f == i {
-        fh = {f: None}
-        ih = {i: None}
+        fh = %{f: None}
+        ih = %{i: None}
         if fh != ih {
           assert.true(False, "{%v: None} != {%v: None}: hashes vary" % fh, ih)
         }
@@ -236,7 +236,7 @@ f0 = 1.0
 assert.eq(type(i0), "int")
 assert.eq(type(f0), "float")
 
-ops = {
+ops = %{
     '+': (x, y) => x + y,
     '-': (x, y) => x - y,
     '*': (x, y) => x * y,

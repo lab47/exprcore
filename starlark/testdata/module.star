@@ -5,7 +5,7 @@ load("assert.star", "assert")
 assert.eq(type(assert), "module")
 assert.eq(str(assert), '<module "assert">')
 assert.eq(dir(assert), ["contains", "eq", "fail", "fails", "lt", "ne", "true"])
-assert.fails(=> ({assert: None}), "unhashable: module")
+assert.fails(=> (%{assert: None}), "unhashable: module")
 
 def assignfield() {
     assert.foo = None

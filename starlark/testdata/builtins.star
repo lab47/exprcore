@@ -6,7 +6,7 @@ load("assert.star", "assert")
 # len
 assert.eq(len([1, 2, 3]), 3)
 assert.eq(len((1, 2, 3)), 3)
-assert.eq(len({1: 2}), 1)
+assert.eq(len(%{1: 2}), 1)
 assert.fails(=> len(1), "int.*has no len" )
 
 # and, or
@@ -32,9 +32,9 @@ assert.true(4 not in [1, 2, 3])
 assert.true(3 in (1, 2, 3))
 assert.true(4 not in (1, 2, 3))
 assert.fails(=> 3 in "foo", "in.*requires string as left operand" )
-assert.true(123 in {123: ""})
-assert.true(456 not in {123:""})
-assert.true([] not in {123: ""})
+assert.true(123 in %{123: ""})
+assert.true(456 not in %{123:""})
+assert.true([] not in %{123: ""})
 
 # sorted
 assert.eq(sorted([42, 123, 3]), [3, 42, 123])
@@ -68,10 +68,10 @@ assert.eq(len(set([1, 2, 3])), 3)
 assert.eq(sorted([x for x in set([1, 2, 3])]), [1, 2, 3])
 
 # dict
-assert.eq(dict([(1, 2), (3, 4)]), {1: 2, 3: 4})
-assert.eq(dict([(1, 2), (3, 4)], foo="bar"), {1: 2, 3: 4, "foo": "bar"})
-assert.eq(dict({1:2, 3:4}), {1: 2, 3: 4})
-assert.eq(dict({1:2, 3:4}.items()), {1: 2, 3: 4})
+assert.eq(dict([(1, 2), (3, 4)]), %{1: 2, 3: 4})
+assert.eq(dict([(1, 2), (3, 4)], foo="bar"), %{1: 2, 3: 4, "foo": "bar"})
+assert.eq(dict(%{1:2, 3:4}), %{1: 2, 3: 4})
+assert.eq(dict(%{1:2, 3:4}.items()), %{1: 2, 3: 4})
 
 # range
 assert.eq("range", type(range(10)))
@@ -79,7 +79,7 @@ assert.eq("range(10)", str(range(0, 10, 1)))
 assert.eq("range(1, 10)", str(range(1, 10)))
 assert.eq(range(0, 5, 10), range(0, 5, 11))
 assert.eq("range(0, 10, -1)", str(range(0, 10, -1)))
-assert.fails(=> {{range(10): 10}}, "unhashable: range" )
+assert.fails(=> {%{range(10): 10}}, "unhashable: range" )
 assert.true(bool(range(1, 2)))
 assert.true(not(range(2, 1))) # an empty range is false
 assert.eq([x*x for x in range(5)], [0, 1, 4, 9, 16])
@@ -124,7 +124,7 @@ assert.fails(=> range(0, 0, 2)[:][0], "index 0 out of range: empty range" )
 
 # list
 assert.eq(list("abc".elems()), ["a", "b", "c"])
-assert.eq(sorted(list({"a": 1, "b": 2})), ['a', 'b'])
+assert.eq(sorted(list(%{"a": 1, "b": 2})), ['a', 'b'])
 
 # min, max
 assert.eq(min(5, -2, 1, 7, 3), -2)
@@ -160,7 +160,7 @@ z1.append(3)
 
 # dir for builtin_function_or_method
 assert.eq(dir(None), [])
-assert.eq(dir({})[:3], ["clear", "get", "items"]) # etc
+assert.eq(dir(%{})[:3], ["clear", "get", "items"]) # etc
 assert.eq(dir(1), [])
 assert.eq(dir([])[:3], ["append", "clear", "extend"]) # etc
 

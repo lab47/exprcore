@@ -4,24 +4,24 @@
 load("assert.star", "assert", "freeze")
 
 # literals
-assert.eq({}, {})
-assert.eq({"a": 1}, {"a": 1})
-assert.eq({"a": 1,}, {"a": 1})
+assert.eq(%{}, %{})
+assert.eq(%{"a": 1}, %{"a": 1})
+assert.eq(%{"a": 1,}, %{"a": 1})
 
 # truth
-assert.true({False: False})
-assert.true(not {})
+assert.true(%{False: False})
+assert.true(not %{})
 
 # dict + dict is no longer supported.
-assert.fails(=> { {"a": 1} + {"b": 2} }, 'unknown binary op: dict \\+ dict')
+assert.fails(=> { %{"a": 1} + %{"b": 2} }, 'unknown binary op: dict \\+ dict')
 
 # dict comprehension
-assert.eq({x: x*x for x in range(3)}, {0: 0, 1: 1, 2: 4})
+assert.eq(%{x: x*x for x in range(3)}, %{0: 0, 1: 1, 2: 4})
 
 # dict.pop
-x6 = {"a": 1, "b": 2}
+x6 = %{"a": 1, "b": 2}
 assert.eq(x6.pop("a"), 1)
-assert.eq(str(x6), '{"b": 2}')
+assert.eq(str(x6), '%{"b": 2}')
 assert.fails(=> x6.pop("c"), "pop: missing key")
 assert.eq(x6.pop("c", 3), 3)
 assert.eq(x6.pop("c", None), None) # default=None tests an edge case of UnpackArgs
@@ -29,20 +29,20 @@ assert.eq(x6.pop("b"), 2)
 assert.eq(len(x6), 0)
 
 # dict.popitem
-x7 = {"a": 1, "b": 2}
+x7 = %{"a": 1, "b": 2}
 assert.eq([x7.popitem(), x7.popitem()], [("a", 1), ("b", 2)])
 assert.fails(x7.popitem, "empty dict")
 assert.eq(len(x7), 0)
 
 # dict.keys, dict.values
-x8 = {"a": 1, "b": 2}
+x8 = %{"a": 1, "b": 2}
 assert.eq(x8.keys(), ["a", "b"])
 assert.eq(x8.values(), [1, 2])
 
 # equality
-assert.eq({"a": 1, "b": 2}, {"a": 1, "b": 2})
-assert.eq({"a": 1, "b": 2,}, {"a": 1, "b": 2})
-assert.eq({"a": 1, "b": 2}, {"b": 2, "a": 1})
+assert.eq(%{"a": 1, "b": 2}, %{"a": 1, "b": 2})
+assert.eq(%{"a": 1, "b": 2,}, %{"a": 1, "b": 2})
+assert.eq(%{"a": 1, "b": 2}, %{"b": 2, "a": 1})
 
 # insertion order is preserved
 assert.eq(dict([("a", 0), ("b", 1), ("c", 2), ("b", 3)]).keys(), ["a", "b", "c"])
@@ -55,42 +55,42 @@ assert.eq(small.keys(), ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"])
 
 # Duplicate keys are not permitted in dictionary expressions (see b/35698444).
 # (Nor in keyword args to function calls---checked by resolver.)
-assert.fails(=> { {"aa": 1, "bb": 2, "cc": 3, "bb": 4} }, 'duplicate key: "bb"')
+assert.fails(=> { %{"aa": 1, "bb": 2, "cc": 3, "bb": 4} }, 'duplicate key: "bb"')
 
 # Check that even with many positional args, keyword collisions are detected.
-assert.fails(=> dict({'b': 3}, a=4, **dict(a=5)), 'dict: duplicate keyword arg: "a"')
-assert.fails(=> dict({'a': 2, 'b': 3}, a=4, **dict(a=5)), 'dict: duplicate keyword arg: "a"')
+assert.fails(=> dict(%{'b': 3}, a=4, **dict(a=5)), 'dict: duplicate keyword arg: "a"')
+assert.fails(=> dict(%{'a': 2, 'b': 3}, a=4, **dict(a=5)), 'dict: duplicate keyword arg: "a"')
 # positional/keyword arg key collisions are ok
-assert.eq(dict((['a', 2], ), a=4), {'a': 4})
-assert.eq(dict((['a', 2], ['a', 3]), a=4), {'a': 4})
+assert.eq(dict((['a', 2], ), a=4), %{'a': 4})
+assert.eq(dict((['a', 2], ['a', 3]), a=4), %{'a': 4})
 
 # index
 def setIndex(d, k, v) {
   d[k] = v
 }
 
-x9 = {}
+x9 = %{}
 assert.fails(=> x9["a"], 'key "a" not in dict')
 x9["a"] = 1
 assert.eq(x9["a"], 1)
-assert.eq(x9, {"a": 1})
+assert.eq(x9, %{"a": 1})
 assert.fails(=> setIndex(x9, [], 2), 'unhashable type: list')
 freeze(x9)
 assert.fails(=> setIndex(x9, "a", 3), 'cannot insert into frozen hash table')
 
-x9a = {}
+x9a = %{}
 x9a[1, 2] = 3  # unparenthesized tuple is allowed here
 assert.eq(x9a.keys()[0], (1, 2))
 
 # dict.get
-x10 = {"a": 1}
+x10 = %{"a": 1}
 assert.eq(x10.get("a"), 1)
 assert.eq(x10.get("b"), None)
 assert.eq(x10.get("a", 2), 1)
 assert.eq(x10.get("b", 2), 2)
 
 # dict.clear
-x11 = {"a": 1}
+x11 = %{"a": 1}
 assert.contains(x11, "a")
 assert.eq(x11["a"], 1)
 x11.clear()
@@ -100,7 +100,7 @@ freeze(x11)
 assert.fails(x11.clear, "cannot clear frozen hash table")
 
 # dict.setdefault
-x12 = {"a": 1}
+x12 = %{"a": 1}
 assert.eq(x12.setdefault("a"), 1)
 assert.eq(x12["a"], 1)
 assert.eq(x12.setdefault("b"), None)
@@ -114,20 +114,20 @@ assert.eq(x12.setdefault("a", 1), 1) # no change, no error
 assert.fails(=> x12.setdefault("d", 1), "cannot insert into frozen hash table")
 
 # dict.update
-x13 = {"a": 1}
+x13 = %{"a": 1}
 x13.update(a=2, b=3)
-assert.eq(x13, {"a": 2, "b": 3})
+assert.eq(x13, %{"a": 2, "b": 3})
 x13.update([("b", 4), ("c", 5)])
-assert.eq(x13, {"a": 2, "b": 4, "c": 5})
-x13.update({"c": 6, "d": 7})
-assert.eq(x13, {"a": 2, "b": 4, "c": 6, "d": 7})
+assert.eq(x13, %{"a": 2, "b": 4, "c": 5})
+x13.update(%{"c": 6, "d": 7})
+assert.eq(x13, %{"a": 2, "b": 4, "c": 6, "d": 7})
 freeze(x13)
-assert.fails(=> x13.update({"a": 8}), "cannot insert into frozen hash table")
+assert.fails(=> x13.update(%{"a": 8}), "cannot insert into frozen hash table")
 
 # dict as a sequence
 #
 # for loop
-x14 = {1:2, 3:4}
+x14 = %{1:2, 3:4}
 def keys(dict) {
   keys = []
   for k in dict { keys.append(k) }
@@ -140,7 +140,7 @@ assert.eq([x for x in x14], [1, 3])
 #
 # varargs
 def varargs(*args) { return args }
-x15 = {"one": 1}
+x15 = %{"one": 1}
 assert.eq(varargs(*x15), ("one",))
 
 # kwargs parameter does not alias the **kwargs dict
@@ -152,7 +152,7 @@ assert.ne(x16, x15)
 
 # iterator invalidation
 def iterator1() {
-  dict = {1:1, 2:1}
+  dict = %{1:1, 2:1}
   for k in dict {
     dict[2*k] = dict[k]
   }
@@ -160,7 +160,7 @@ def iterator1() {
 assert.fails(iterator1, "insert.*during iteration")
 
 def iterator2() {
-  dict = {1:1, 2:1}
+  dict = %{1:1, 2:1}
   for k in dict {
     dict.pop(k)
   }
@@ -171,7 +171,7 @@ def iterator3() {
   def f(d) {
     d[3] = 3
   }
-  dict = {1:1, 2:1}
+  dict = %{1:1, 2:1}
   _ = [f(dict) for x in dict]
 }
 assert.fails(iterator3, "insert.*during iteration")
@@ -180,57 +180,57 @@ assert.fails(iterator3, "insert.*during iteration")
 # the sequence x should be completely iterated before
 # the assignment occurs.
 def f() {
-  x = {1:2, 2:4}
+  x = %{1:2, 2:4}
   a, x[0] = x
   assert.eq(a, 1)
-  assert.eq(x, {1: 2, 2: 4, 0: 2})
+  assert.eq(x, %{1: 2, 2: 4, 0: 2})
 }
 f()
 
 # Regression test for a bug in hashtable.delete
 def test_delete() {
-  d = {}
+  d = %{}
 
   # delete tail first
   d["one"] = 1
   d["two"] = 2
-  assert.eq(str(d), '{"one": 1, "two": 2}')
+  assert.eq(str(d), '%{"one": 1, "two": 2}')
   d.pop("two")
-  assert.eq(str(d), '{"one": 1}')
+  assert.eq(str(d), '%{"one": 1}')
   d.pop("one")
-  assert.eq(str(d), '{}')
+  assert.eq(str(d), '%{}')
 
   # delete head first
   d["one"] = 1
   d["two"] = 2
-  assert.eq(str(d), '{"one": 1, "two": 2}')
+  assert.eq(str(d), '%{"one": 1, "two": 2}')
   d.pop("one")
-  assert.eq(str(d), '{"two": 2}')
+  assert.eq(str(d), '%{"two": 2}')
   d.pop("two")
-  assert.eq(str(d), '{}')
+  assert.eq(str(d), '%{}')
 
   # delete middle
   d["one"] = 1
   d["two"] = 2
   d["three"] = 3
-  assert.eq(str(d), '{"one": 1, "two": 2, "three": 3}')
+  assert.eq(str(d), '%{"one": 1, "two": 2, "three": 3}')
   d.pop("two")
-  assert.eq(str(d), '{"one": 1, "three": 3}')
+  assert.eq(str(d), '%{"one": 1, "three": 3}')
   d.pop("three")
-  assert.eq(str(d), '{"one": 1}')
+  assert.eq(str(d), '%{"one": 1}')
   d.pop("one")
-  assert.eq(str(d), '{}')
+  assert.eq(str(d), '%{}')
 }
 test_delete()
 
 # Regression test for github.com/google/starlark-go/issues/128.
 assert.fails(=> dict(None), 'got NoneType, want iterable')
-assert.fails(=> { {}.update(None) }, 'got NoneType, want iterable')
+assert.fails(=> { %{}.update(None) }, 'got NoneType, want iterable')
 
 ---
 # Verify position of an "unhashable key" error in a dict literal.
 
-_ = {
+_ = %{
     "one": 1,
     ["two"]: 2, ### "unhashable type: list"
     "three": 3,
@@ -239,7 +239,7 @@ _ = {
 ---
 # Verify position of a "duplicate key" error in a dict literal.
 
-_ = {
+_ = %{
     "one": 1,
     "one": 1, ### `duplicate key: "one"`
     "three": 3,
@@ -248,6 +248,6 @@ _ = {
 ---
 # Verify position of an "unhashable key" error in a dict comprehension.
 
-_ = {
+_ = %{
     k: v for k, v in [ ("one", 1), (["two"], 2), ("three", 3), ] ### "unhashable type: list"
 }

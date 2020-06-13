@@ -54,8 +54,8 @@ f(a=1, *, b=2) ### `got ',', want primary`
 
 ---
 
-_ = {x:y for y in z} # ok
-_ = {x for y in z}   ### `got for, want ':'`
+_ = %{x:y for y in z} # ok
+_ = %{x for y in z}   ### `got for, want ':'`
 
 ---
 

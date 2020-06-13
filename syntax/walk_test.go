@@ -77,7 +77,7 @@ func ExampleWalk() {
 load("library", "a")
 
 def b(c, *, d=e) {
-    f += {g: h}
+    f += %{g: h}
     i = -(j)
     return k.l[m + n]
 }
