@@ -337,6 +337,7 @@ type Funcode struct {
 	NumParams             int
 	NumKwonlyParams       int
 	HasVarargs, HasKwargs bool
+	SubFunctions          []uint32
 
 	// -- transient state --
 
@@ -1876,7 +1877,12 @@ func (fcomp *fcomp) function(f *resolve.Function) {
 	funcode.NumKwonlyParams = f.NumKwonlyParams
 	funcode.HasVarargs = f.HasVarargs
 	funcode.HasKwargs = f.HasKwargs
-	fcomp.emit1(MAKEFUNC, fcomp.pcomp.functionIndex(funcode))
+
+	subfn := fcomp.pcomp.functionIndex(funcode)
+
+	fcomp.fn.SubFunctions = append(fcomp.fn.SubFunctions, subfn)
+
+	fcomp.emit1(MAKEFUNC, subfn)
 }
 
 // ifelse emits a Boolean control flow decision.

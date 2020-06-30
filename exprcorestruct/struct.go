@@ -145,7 +145,7 @@ func (s *Struct) String() string {
 			buf.WriteString(", ")
 		}
 		buf.WriteString(e.name)
-		buf.WriteString(" = ")
+		buf.WriteString(": ")
 		buf.WriteString(e.value.String())
 	}
 	buf.WriteByte(')')

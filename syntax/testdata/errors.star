@@ -50,7 +50,7 @@ f(**kwargs, )
 
 ---
 
-f(a=1, *, b=2) ### `got ',', want primary`
+f(a:1, *, b:2) ### `got ',', want primary`
 
 ---
 
@@ -135,10 +135,10 @@ _ = [x for x in a if b else c] ### `got else, want ']', for, or if`
 ---
 _ = a + b not c ### "got identifier, want in"
 ---
-f(1+2 = 3) ### "keyword argument must have form name=expr"
+f(1+2 : 3) ### "keyword argument must have form name:expr"
 ---
 print(1, 2, 3
-### `got end of file, want '\)'`
+### `got end of file, want primary expression`
 ---
 _ = a if b ### "conditional expression without else clause"
 ---

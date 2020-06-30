@@ -98,7 +98,7 @@ assert.eq(1 + \
 ---
 # A regression test for error position information.
 
-_ = %{}.get(1, default=2) ### "get: unexpected keyword arguments"
+_ = %{}.get(1, default:2) ### "get: unexpected keyword arguments"
 
 ---
 # Load exposes explicitly declared globals from other modules.

@@ -58,11 +58,11 @@ assert.eq(small.keys(), ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"])
 assert.fails(=> { %{"aa": 1, "bb": 2, "cc": 3, "bb": 4} }, 'duplicate key: "bb"')
 
 # Check that even with many positional args, keyword collisions are detected.
-assert.fails(=> dict(%{'b': 3}, a=4, **dict(a=5)), 'dict: duplicate keyword arg: "a"')
-assert.fails(=> dict(%{'a': 2, 'b': 3}, a=4, **dict(a=5)), 'dict: duplicate keyword arg: "a"')
+assert.fails(=> dict(%{'b': 3}, a:4, **dict(a:5)), 'dict: duplicate keyword arg: "a"')
+assert.fails(=> dict(%{'a': 2, 'b': 3}, a:4, **dict(a:5)), 'dict: duplicate keyword arg: "a"')
 # positional/keyword arg key collisions are ok
-assert.eq(dict((['a', 2], ), a=4), %{'a': 4})
-assert.eq(dict((['a', 2], ['a', 3]), a=4), %{'a': 4})
+assert.eq(dict((['a', 2], ), a:4), %{'a': 4})
+assert.eq(dict((['a', 2], ['a', 3]), a:4), %{'a': 4})
 
 # index
 def setIndex(d, k, v) {
@@ -115,7 +115,7 @@ assert.fails(=> x12.setdefault("d", 1), "cannot insert into frozen hash table")
 
 # dict.update
 x13 = %{"a": 1}
-x13.update(a=2, b=3)
+x13.update(a:2, b:3)
 assert.eq(x13, %{"a": 2, "b": 3})
 x13.update([("b", 4), ("c", 5)])
 assert.eq(x13, %{"a": 2, "b": 4, "c": 5})

@@ -226,7 +226,7 @@ pass
 # Positional arguments (and required parameters)
 # must appear before named arguments (and optional parameters).
 
-M(x=1, 2) ### `positional argument may not follow named`
+M(x:1, 2) ### `positional argument may not follow named`
 
 def f(x=1, y) {} ### `required parameter may not follow optional`
 ---
@@ -271,7 +271,7 @@ def n(*, a=1, **kwargs) {} # ok
 def f(*args, **kwargs) {}
 
 f(**{}, 1) ### `argument may not follow \*\*kwargs`
-f(**{}, x=1) ### `argument may not follow \*\*kwargs`
+f(**{}, x:1) ### `argument may not follow \*\*kwargs`
 f(**{}, *[]) ### `\*args may not follow \*\*kwargs`
 f(**{}, **{}) ### `multiple \*\*kwargs not allowed`
 
@@ -280,7 +280,7 @@ f(**{}, **{}) ### `multiple \*\*kwargs not allowed`
 def f(*args, **kwargs) {}
 
 f(*[], 1) ### `argument may not follow \*args`
-f(*[], a=1) # ok
+f(*[], a:1) # ok
 f(*[], *[]) ### `multiple \*args not allowed`
 f(*[], **{}) # ok
 
@@ -331,7 +331,7 @@ U = 1 # ok (legacy)
 ---
 # https://github.com/bazelbuild/starlark/starlark/issues/21
 def f(**kwargs) {}
-f(a=1, a=1) ### `keyword argument a repeated`
+f(a:1, a:1) ### `keyword argument a repeated`
 
 
 ---

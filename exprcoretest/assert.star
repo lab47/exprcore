@@ -53,11 +53,11 @@ freeze = _freeze  # an exported global whose value is the built-in freeze functi
 
 assert = module(
     "assert",
-    fail = error,
-    eq = _eq,
-    ne = _ne,
-    true = _true,
-    lt = _lt,
-    contains = _contains,
-    fails = _fails,
+    fail: error,
+    eq: _eq,
+    ne: _ne,
+    true: _true,
+    lt: _lt,
+    contains: _contains,
+    fails: _fails,
 )

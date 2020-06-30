@@ -13,6 +13,7 @@ package syntax
 
 import (
 	"log"
+	"strings"
 )
 
 // Enable this flag to print the token stream and log.Fatal on the first error.
@@ -214,7 +215,7 @@ func (p *parser) parseStmt2() Stmt {
 	return stmt
 }
 
-func (p *parser) parseDefStmt() Stmt {
+func (p *parser) parseDefStmt() *DefStmt {
 	defpos := p.nextToken() // consume DEF
 	id := p.parseIdent()
 	p.consume(LPAREN)
@@ -473,10 +474,29 @@ func (p *parser) parseIdent() *Ident {
 	return id
 }
 
-func (p *parser) consume(t Token) Position {
-	if p.tok != t {
-		p.in.errorf(p.in.pos, "got %#v, want %#v", p.tok, t)
+func (p *parser) consume(tokens ...Token) Position {
+	var ok bool
+
+	for _, t := range tokens {
+		if p.tok == t {
+			ok = true
+			break
+		}
 	}
+
+	if !ok {
+		if len(tokens) == 1 {
+			p.in.errorf(p.in.pos, "got %#v, want %#v", p.tok, tokens[0])
+		} else {
+			var strs []string
+			for _, t := range tokens {
+				strs = append(strs, t.String())
+			}
+
+			p.in.errorf(p.in.pos, "got %#v, want one of: '%s'", p.tok, strings.Join(strs, "' '"))
+		}
+	}
+
 	return p.nextToken()
 }
 
@@ -806,7 +826,7 @@ func (p *parser) parseArgs(ec exprContext) []Expr {
 	var args []Expr
 	for p.tok != RPAREN && p.tok != EOF {
 		if len(args) > 0 {
-			p.consume(COMMA)
+			p.consume(COMMA, SEMI)
 		}
 		if p.tok == RPAREN {
 			break
@@ -825,31 +845,46 @@ func (p *parser) parseArgs(ec exprContext) []Expr {
 			continue
 		}
 
-		// We use a different strategy from Bazel here to stay within LL(1).
-		// Instead of looking ahead two tokens (IDENT, EQ) we parse
-		// 'test = test' then check that the first was an IDENT.
-		x := p.parseTest(ec)
+		var arg Expr
 
-		if p.tok == EQ {
-			// name = value
-			if _, ok := x.(*Ident); !ok {
-				p.in.errorf(p.in.pos, "keyword argument must have form name=expr")
-			}
-			eq := p.nextToken()
-			y := p.parseTest(ec)
-			x = &BinaryExpr{
-				X:     x,
-				OpPos: eq,
+		if p.tok == DEF {
+			x := p.parseDefStmt()
+
+			arg = &BinaryExpr{
+				X:     x.Name,
+				OpPos: x.Def,
 				Op:    EQ,
-				Y:     y,
+				Y: &LambdaExpr{
+					Lambda: x.Def,
+					Params: x.Params,
+					Stmts:  x.Body,
+				},
+			}
+		} else {
+			// We use a different strategy from Bazel here to stay within LL(1).
+			// Instead of looking ahead two tokens (IDENT, COLON) we parse
+			// 'test = test' then check that the first was an IDENT.
+			x := p.parseTest(ec)
+
+			if p.tok == COLON {
+				// name: value
+				if _, ok := x.(*Ident); !ok {
+					p.in.errorf(p.in.pos, "keyword argument must have form name:expr")
+				}
+				eq := p.nextToken()
+				y := p.parseTest(ec)
+				arg = &BinaryExpr{
+					X:     x,
+					OpPos: eq,
+					Op:    EQ,
+					Y:     y,
+				}
+			} else {
+				arg = x
 			}
 		}
 
-		if p.tok == SEMI {
-			p.nextToken()
-		}
-
-		args = append(args, x)
+		args = append(args, arg)
 	}
 	return args
 }
@@ -1112,7 +1147,7 @@ func (p *parser) parseProto(ec exprContext) Expr {
 // dict_entry = test ':' test
 func (p *parser) parseProtoEntry(ec exprContext) *ProtoEntry {
 	if p.tok == DEF {
-		de := p.parseDefStmt().(*DefStmt)
+		de := p.parseDefStmt()
 		return &ProtoEntry{Key: de.Name, Colon: de.Name.NamePos, Value: de}
 	}
 

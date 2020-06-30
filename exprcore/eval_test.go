@@ -310,114 +310,114 @@ def j(a, b=42, *args, c, d=123, e, **kwargs) {
 		// b(a, b)
 		{`b()`, `function b missing 2 arguments (a, b)`},
 		{`b(1)`, `function b missing 1 argument (b)`},
-		{`b(a=1)`, `function b missing 1 argument (b)`},
-		{`b(b=1)`, `function b missing 1 argument (a)`},
+		{`b(a:1)`, `function b missing 1 argument (b)`},
+		{`b(b:1)`, `function b missing 1 argument (a)`},
 		{`b(1, 2)`, `(1, 2)`},
 		{`b`, `<function b>`}, // asserts that b's parameter b was treated as a local variable
 		{`b(1, 2, 3)`, `function b accepts 2 positional arguments (3 given)`},
-		{`b(1, b=2)`, `(1, 2)`},
-		{`b(1, a=2)`, `function b got multiple values for parameter "a"`},
-		{`b(1, x=2)`, `function b got an unexpected keyword argument "x"`},
-		{`b(a=1, b=2)`, `(1, 2)`},
-		{`b(b=1, a=2)`, `(2, 1)`},
-		{`b(b=1, a=2, x=1)`, `function b got an unexpected keyword argument "x"`},
-		{`b(x=1, b=1, a=2)`, `function b got an unexpected keyword argument "x"`},
+		{`b(1, b:2)`, `(1, 2)`},
+		{`b(1, a:2)`, `function b got multiple values for parameter "a"`},
+		{`b(1, x:2)`, `function b got an unexpected keyword argument "x"`},
+		{`b(a:1, b:2)`, `(1, 2)`},
+		{`b(b:1, a:2)`, `(2, 1)`},
+		{`b(b:1, a:2, x:1)`, `function b got an unexpected keyword argument "x"`},
+		{`b(x:1, b:1, a:2)`, `function b got an unexpected keyword argument "x"`},
 
-		// c(a, b=42)
+		// c(a, b:42)
 		{`c()`, `function c missing 1 argument (a)`},
 		{`c(1)`, `(1, 42)`},
 		{`c(1, 2)`, `(1, 2)`},
 		{`c(1, 2, 3)`, `function c accepts at most 2 positional arguments (3 given)`},
-		{`c(1, b=2)`, `(1, 2)`},
-		{`c(1, a=2)`, `function c got multiple values for parameter "a"`},
-		{`c(a=1, b=2)`, `(1, 2)`},
-		{`c(b=1, a=2)`, `(2, 1)`},
+		{`c(1, b:2)`, `(1, 2)`},
+		{`c(1, a:2)`, `function c got multiple values for parameter "a"`},
+		{`c(a:1, b:2)`, `(1, 2)`},
+		{`c(b:1, a:2)`, `(2, 1)`},
 
 		// d(*args)
 		{`d()`, `()`},
 		{`d(1)`, `(1,)`},
 		{`d(1, 2)`, `(1, 2)`},
-		{`d(1, 2, k=3)`, `function d got an unexpected keyword argument "k"`},
-		{`d(args=[])`, `function d got an unexpected keyword argument "args"`},
+		{`d(1, 2, k:3)`, `function d got an unexpected keyword argument "k"`},
+		{`d(args:[])`, `function d got an unexpected keyword argument "args"`},
 
 		// e(**kwargs)
 		{`e()`, `%{}`},
 		{`e(1)`, `function e accepts 0 positional arguments (1 given)`},
-		{`e(k=1)`, `%{"k": 1}`},
-		{`e(kwargs=%{})`, `%{"kwargs": %{}}`},
+		{`e(k:1)`, `%{"k": 1}`},
+		{`e(kwargs:%{})`, `%{"kwargs": %{}}`},
 
-		// f(a, b=42, *args, **kwargs)
+		// f(a, b:42, *args, **kwargs)
 		{`f()`, `function f missing 1 argument (a)`},
 		{`f(0)`, `(0, 42, (), %{})`},
 		{`f(0)`, `(0, 42, (), %{})`},
 		{`f(0, 1)`, `(0, 1, (), %{})`},
 		{`f(0, 1, 2)`, `(0, 1, (2,), %{})`},
 		{`f(0, 1, 2, 3)`, `(0, 1, (2, 3), %{})`},
-		{`f(a=0)`, `(0, 42, (), %{})`},
-		{`f(0, b=1)`, `(0, 1, (), %{})`},
-		{`f(0, a=1)`, `function f got multiple values for parameter "a"`},
-		{`f(0, b=1, c=2)`, `(0, 1, (), %{"c": 2})`},
-		{`f(0, 1, x=2, *[3, 4], y=5, **dict(z=6))`, // github.com/google/skylark/issues/135
+		{`f(a:0)`, `(0, 42, (), %{})`},
+		{`f(0, b:1)`, `(0, 1, (), %{})`},
+		{`f(0, a:1)`, `function f got multiple values for parameter "a"`},
+		{`f(0, b:1, c:2)`, `(0, 1, (), %{"c": 2})`},
+		{`f(0, 1, x:2, *[3, 4], y:5, **dict(z:6))`, // github.com/google/skylark/issues/135
 			`(0, 1, (3, 4), %{"x": 2, "y": 5, "z": 6})`},
 
-		// g(a, b=42, *args, c=123, **kwargs)
+		// g(a, b:42, *args, c:123, **kwargs)
 		{`g()`, `function g missing 1 argument (a)`},
 		{`g(0)`, `(0, 42, (), 123, %{})`},
 		{`g(0, 1)`, `(0, 1, (), 123, %{})`},
 		{`g(0, 1, 2)`, `(0, 1, (2,), 123, %{})`},
 		{`g(0, 1, 2, 3)`, `(0, 1, (2, 3), 123, %{})`},
-		{`g(a=0)`, `(0, 42, (), 123, %{})`},
-		{`g(0, b=1)`, `(0, 1, (), 123, %{})`},
-		{`g(0, a=1)`, `function g got multiple values for parameter "a"`},
-		{`g(0, b=1, c=2, d=3)`, `(0, 1, (), 2, %{"d": 3})`},
-		{`g(0, 1, x=2, *[3, 4], y=5, **dict(z=6))`,
+		{`g(a:0)`, `(0, 42, (), 123, %{})`},
+		{`g(0, b:1)`, `(0, 1, (), 123, %{})`},
+		{`g(0, a:1)`, `function g got multiple values for parameter "a"`},
+		{`g(0, b:1, c:2, d:3)`, `(0, 1, (), 2, %{"d": 3})`},
+		{`g(0, 1, x:2, *[3, 4], y:5, **dict(z:6))`,
 			`(0, 1, (3, 4), 123, %{"x": 2, "y": 5, "z": 6})`},
 
-		// h(a, b=42, *, c=123, **kwargs)
+		// h(a, b:42, *, c:123, **kwargs)
 		{`h()`, `function h missing 1 argument (a)`},
 		{`h(0)`, `(0, 42, 123, %{})`},
 		{`h(0, 1)`, `(0, 1, 123, %{})`},
 		{`h(0, 1, 2)`, `function h accepts at most 2 positional arguments (3 given)`},
-		{`h(a=0)`, `(0, 42, 123, %{})`},
-		{`h(0, b=1)`, `(0, 1, 123, %{})`},
-		{`h(0, a=1)`, `function h got multiple values for parameter "a"`},
-		{`h(0, b=1, c=2)`, `(0, 1, 2, %{})`},
-		{`h(0, b=1, d=2)`, `(0, 1, 123, %{"d": 2})`},
-		{`h(0, b=1, c=2, d=3)`, `(0, 1, 2, %{"d": 3})`},
-		{`h(0, b=1, c=2, d=3)`, `(0, 1, 2, %{"d": 3})`},
+		{`h(a:0)`, `(0, 42, 123, %{})`},
+		{`h(0, b:1)`, `(0, 1, 123, %{})`},
+		{`h(0, a:1)`, `function h got multiple values for parameter "a"`},
+		{`h(0, b:1, c:2)`, `(0, 1, 2, %{})`},
+		{`h(0, b:1, d:2)`, `(0, 1, 123, %{"d": 2})`},
+		{`h(0, b:1, c:2, d:3)`, `(0, 1, 2, %{"d": 3})`},
+		{`h(0, b:1, c:2, d:3)`, `(0, 1, 2, %{"d": 3})`},
 
-		// i(a, b=42, *, c, d=123, e, **kwargs)
+		// i(a, b:42, *, c, d:123, e, **kwargs)
 		{`i()`, `function i missing 3 arguments (a, c, e)`},
 		{`i(0)`, `function i missing 2 arguments (c, e)`},
 		{`i(0, 1)`, `function i missing 2 arguments (c, e)`},
 		{`i(0, 1, 2)`, `function i accepts at most 2 positional arguments (3 given)`},
-		{`i(0, 1, e=2)`, `function i missing 1 argument (c)`},
+		{`i(0, 1, e:2)`, `function i missing 1 argument (c)`},
 		{`i(0, 1, 2, 3)`, `function i accepts at most 2 positional arguments (4 given)`},
-		{`i(a=0)`, `function i missing 2 arguments (c, e)`},
-		{`i(0, b=1)`, `function i missing 2 arguments (c, e)`},
-		{`i(0, a=1)`, `function i got multiple values for parameter "a"`},
-		{`i(0, b=1, c=2)`, `function i missing 1 argument (e)`},
-		{`i(0, b=1, d=2)`, `function i missing 2 arguments (c, e)`},
-		{`i(0, b=1, c=2, d=3)`, `function i missing 1 argument (e)`},
-		{`i(0, b=1, c=2, d=3, e=4)`, `(0, 1, 2, 3, 4, %{})`},
-		{`i(0, 1, b=1, c=2, d=3, e=4)`, `function i got multiple values for parameter "b"`},
+		{`i(a:0)`, `function i missing 2 arguments (c, e)`},
+		{`i(0, b:1)`, `function i missing 2 arguments (c, e)`},
+		{`i(0, a:1)`, `function i got multiple values for parameter "a"`},
+		{`i(0, b:1, c:2)`, `function i missing 1 argument (e)`},
+		{`i(0, b:1, d:2)`, `function i missing 2 arguments (c, e)`},
+		{`i(0, b:1, c:2, d:3)`, `function i missing 1 argument (e)`},
+		{`i(0, b:1, c:2, d:3, e:4)`, `(0, 1, 2, 3, 4, %{})`},
+		{`i(0, 1, b:1, c:2, d:3, e:4)`, `function i got multiple values for parameter "b"`},
 
-		// j(a, b=42, *args, c, d=123, e, **kwargs)
+		// j(a, b:42, *args, c, d:123, e, **kwargs)
 		{`j()`, `function j missing 3 arguments (a, c, e)`},
 		{`j(0)`, `function j missing 2 arguments (c, e)`},
 		{`j(0, 1)`, `function j missing 2 arguments (c, e)`},
 		{`j(0, 1, 2)`, `function j missing 2 arguments (c, e)`},
-		{`j(0, 1, e=2)`, `function j missing 1 argument (c)`},
+		{`j(0, 1, e:2)`, `function j missing 1 argument (c)`},
 		{`j(0, 1, 2, 3)`, `function j missing 2 arguments (c, e)`},
-		{`j(a=0)`, `function j missing 2 arguments (c, e)`},
-		{`j(0, b=1)`, `function j missing 2 arguments (c, e)`},
-		{`j(0, a=1)`, `function j got multiple values for parameter "a"`},
-		{`j(0, b=1, c=2)`, `function j missing 1 argument (e)`},
-		{`j(0, b=1, d=2)`, `function j missing 2 arguments (c, e)`},
-		{`j(0, b=1, c=2, d=3)`, `function j missing 1 argument (e)`},
-		{`j(0, b=1, c=2, d=3, e=4)`, `(0, 1, (), 2, 3, 4, %{})`},
-		{`j(0, 1, b=1, c=2, d=3, e=4)`, `function j got multiple values for parameter "b"`},
-		{`j(0, 1, 2, c=3, e=4)`, `(0, 1, (2,), 3, 123, 4, %{})`},
+		{`j(a:0)`, `function j missing 2 arguments (c, e)`},
+		{`j(0, b:1)`, `function j missing 2 arguments (c, e)`},
+		{`j(0, a:1)`, `function j got multiple values for parameter "a"`},
+		{`j(0, b:1, c:2)`, `function j missing 1 argument (e)`},
+		{`j(0, b:1, d:2)`, `function j missing 2 arguments (c, e)`},
+		{`j(0, b:1, c:2, d:3)`, `function j missing 1 argument (e)`},
+		{`j(0, b:1, c:2, d:3, e:4)`, `(0, 1, (), 2, 3, 4, %{})`},
+		{`j(0, 1, b:1, c:2, d:3, e:4)`, `function j got multiple values for parameter "b"`},
+		{`j(0, 1, 2, c:3, e:4)`, `(0, 1, (2,), 3, 123, 4, %{})`},
 	} {
 		var got string
 		if v, err := exprcore.Eval(thread, "<expr>", test.src, globals); err != nil {
@@ -436,7 +436,7 @@ def j(a, b=42, *args, c, d=123, e, **kwargs) {
 func TestPrint(t *testing.T) {
 	const src = `
 print("hello")
-def f() { print("hello", "world", sep=", ") }
+def f() { print("hello", "world", sep:", ") }
 f()
 `
 	buf := new(bytes.Buffer)
@@ -516,7 +516,7 @@ func TestBacktrace(t *testing.T) {
 	const src = `
 def f(x) { return 1//x }
 def g(x) { f(x) }
-def h() { return min([1, 2, 0], key=g) }
+def h() { return min([1, 2, 0], key:g) }
 def i() { return h() }
 i()
 `

@@ -119,7 +119,7 @@ func TestExprParseTrees(t *testing.T) {
 			`(BinaryExpr X=(BinaryExpr X=a Op=or Y=(BinaryExpr X=b Op=and Y=c)) Op=or Y=d)`},
 		{`a and b or c and d`,
 			`(BinaryExpr X=(BinaryExpr X=a Op=and Y=b) Op=or Y=(BinaryExpr X=c Op=and Y=d))`},
-		{`f(1, x=y)`,
+		{`f(1, x: y)`,
 			`(CallExpr Fn=f Args=(1 (BinaryExpr X=x Op== Y=y)))`},
 		{`f(*args, **kwargs)`,
 			`(CallExpr Fn=f Args=((UnaryExpr Op=* X=args) (UnaryExpr Op=** X=kwargs)))`},
@@ -273,20 +273,20 @@ pass`,
 		{`x = 1 \
 + 2`,
 			`(AssignStmt Op== LHS=x RHS=(BinaryExpr X=1 Op=+ Y=2))`},
-		{`pkg(install = () => 1)`,
+		{`pkg(install: () => 1)`,
 			`(ExprStmt X=(CallExpr Fn=pkg Args=((BinaryExpr X=install Op== Y=(LambdaExpr Stmts=((ReturnStmt Result=1)))))))`},
 		{`pkg(
-    install = () => 1
+		install: () => 1
 )`,
 			`(ExprStmt X=(CallExpr Fn=pkg Args=((BinaryExpr X=install Op== Y=(LambdaExpr Stmts=((ReturnStmt Result=1)))))))`},
 		{`pkg(
-  install = () => {
+	install: () => {
 	  1
 	}
 )`,
 			`(ExprStmt X=(CallExpr Fn=pkg Args=((BinaryExpr X=install Op== Y=(LambdaExpr Stmts=((ReturnStmt Result=1)))))))`},
 		{`pkg(
-  install = () => {
+	install: () => {
     1
     2
   }

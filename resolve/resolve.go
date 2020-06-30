@@ -793,10 +793,6 @@ func (r *resolver) expr(e syntax.Expr) {
 		}
 
 	case *syntax.LambdaExpr:
-		if !AllowLambda {
-			r.errorf(e.Lambda, doesnt+"support lambda")
-		}
-
 		if e.Stmts == nil {
 			e.Stmts = []syntax.Stmt{&syntax.ReturnStmt{Result: e.Body}}
 		}

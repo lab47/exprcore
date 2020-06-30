@@ -199,7 +199,7 @@ assert.fails(=> f(
     41, 42, 43, 44, 45, 46, 47, 48,
     49, 50, 51, 52, 53, 54, 55, 56,
     57, 58, 59, 60, 61, 62, 63, 64, 65,
-    mm = 100), 'multiple values for parameter "mm"')
+    mm: 100), 'multiple values for parameter "mm"')
 
 ---
 # Regression test for github.com/google/starlark-go/issues/21,
@@ -213,15 +213,15 @@ def f(*args, **kwargs) {
   return args, kwargs
 }
 
-assert.eq(f(x=1, y=2), ((), %{"x": 1, "y": 2}))
-assert.fails(=> f(x=1, **dict(x=2)), 'multiple values for parameter "x"')
+assert.eq(f(x:1, y:2), ((), %{"x": 1, "y": 2}))
+assert.fails(=> f(x:1, **dict(x:2)), 'multiple values for parameter "x"')
 
 def g(x, y) {
   return x, y
 }
 
-assert.eq(g(1, y=2), (1, 2))
-assert.fails(=> g(1, y=2, **%{'y': 3}), 'multiple values for parameter "y"')
+assert.eq(g(1, y:2), (1, 2))
+assert.fails(=> g(1, y:2, **%{'y': 3}), 'multiple values for parameter "y"')
 
 ---
 # Regression test for a bug in CALL_VAR_KW.
@@ -232,7 +232,7 @@ def f(a, b, x, y) {
   return a+b+x+y
 }
 
-assert.eq(f(*("a", "b"), **dict(y="y", x="x")) + ".", 'abxy.')
+assert.eq(f(*("a", "b"), **dict(y:"y", x:"x")) + ".", 'abxy.')
 ---
 # Order of evaluation of function arguments.
 # Regression test for github.com/google/skylark/issues/135.
@@ -249,8 +249,8 @@ def f(*args, **kwargs) {
   return (args, kwargs)
 }
 
-y = f(id(1), id(2), x=id(3), *[id(4)], y=id(5), **dict(z=id(6)))
-assert.eq(y, ((1, 2, 4), dict(x=3, y=5, z=6)))
+y = f(id(1), id(2), x:id(3), *[id(4)], y:id(5), **dict(z:id(6)))
+assert.eq(y, ((1, 2, 4), dict(x:3, y:5, z:6)))
 
 # This matches Python2, but not Starlark-in-Java:
 # *args and *kwargs are evaluated last.
@@ -328,7 +328,7 @@ def d(x, y=None, *args, z=None, ) { pass }
 def e(x, y=None, *args, z=None, **kwargs, ) { pass }
 
 a(1,)
-b(1, y=2, )
+b(1, y:2, )
 #c(1, *[], )
-#d(1, *[], z=None, )
-#e(1, *[], z=None, *{}, )
+#d(1, *[], z:None, )
+#e(1, *[], z:None, *{}, )

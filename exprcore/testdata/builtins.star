@@ -38,20 +38,20 @@ assert.true([] not in %{123: ""})
 
 # sorted
 assert.eq(sorted([42, 123, 3]), [3, 42, 123])
-assert.eq(sorted([42, 123, 3], reverse=True), [123, 42, 3])
+assert.eq(sorted([42, 123, 3], reverse:True), [123, 42, 3])
 assert.eq(sorted(["wiz", "foo", "bar"]), ["bar", "foo", "wiz"])
-assert.eq(sorted(["wiz", "foo", "bar"], reverse=True), ["wiz", "foo", "bar"])
+assert.eq(sorted(["wiz", "foo", "bar"], reverse:True), ["wiz", "foo", "bar"])
 assert.fails(=> sorted([1, 2, None, 3]), "int < NoneType not implemented")
 assert.fails(=> sorted([1, "one"]), "string < int not implemented" )
 # custom key function
-assert.eq(sorted(["two", "three", "four"], key=len),
+assert.eq(sorted(["two", "three", "four"], key:len),
           ["two", "four", "three"])
-assert.eq(sorted(["two", "three", "four"], key=len, reverse=True),
+assert.eq(sorted(["two", "three", "four"], key:len, reverse:True),
           ["three", "four", "two"])
-assert.fails(=> sorted([1, 2, 3], key=None), "got NoneType, want callable" )
+assert.fails(=> sorted([1, 2, 3], key:None), "got NoneType, want callable" )
 # sort is stable
 pairs = [(4, 0), (3, 1), (4, 2), (2, 3), (3, 4), (1, 5), (2, 6), (3, 7)]
-assert.eq(sorted(pairs, key=x => x[0]),
+assert.eq(sorted(pairs, key:x => x[0]),
           [(1, 5),
            (2, 3), (2, 6),
            (3, 1), (3, 4), (3, 7),
@@ -69,7 +69,7 @@ assert.eq(sorted([x for x in set([1, 2, 3])]), [1, 2, 3])
 
 # dict
 assert.eq(dict([(1, 2), (3, 4)]), %{1: 2, 3: 4})
-assert.eq(dict([(1, 2), (3, 4)], foo="bar"), %{1: 2, 3: 4, "foo": "bar"})
+assert.eq(dict([(1, 2), (3, 4)], foo:"bar"), %{1: 2, 3: 4, "foo": "bar"})
 assert.eq(dict(%{1:2, 3:4}), %{1: 2, 3: 4})
 assert.eq(dict(%{1:2, 3:4}.items()), %{1: 2, 3: 4})
 
@@ -135,8 +135,8 @@ assert.eq(max("one", "two", "three", "four"), "two")
 assert.fails(min, "min requires at least one positional argument")
 assert.fails(=> min(1), "not iterable")
 assert.fails(=> min([]), "empty")
-assert.eq(min(5, -2, 1, 7, 3, key=x => x*x), 1) # min absolute value
-assert.eq(min(5, -2, 1, 7, 3, key=x => -x), 7) # min negated value
+assert.eq(min(5, -2, 1, 7, 3, key:x => x*x), 1) # min absolute value
+assert.eq(min(5, -2, 1, 7, 3, key:x => -x), 7) # min negated value
 
 # enumerate
 assert.eq(enumerate("abc".elems()), [(0, "a"), (1, "b"), (2, "c")])
@@ -221,4 +221,4 @@ fail(1) ### `fail: 1`
 ---
 fail(1, 2, 3) ### `fail: 1 2 3`
 ---
-fail(1, 2, 3, sep="/") ### `fail: 1/2/3`
+fail(1, 2, 3, sep:"/") ### `fail: 1/2/3`

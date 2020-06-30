@@ -17,7 +17,7 @@ person = {
 
 assert.eq(12, person.age)
 
-april = person(name="april")
+april = person(name: "april")
 
 assert.eq("april", april.name)
 assert.eq(12, april.age)
