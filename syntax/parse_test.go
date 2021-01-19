@@ -137,6 +137,8 @@ func TestExprParseTrees(t *testing.T) {
 			"(ProtoExpr List=((ProtoEntry Key=age Value=(ExprStmt X=12)) (ProtoEntry Key=bar Value=(ExprStmt X=13))))"},
 		{"{ age: 12; def bar() { return 13 } }",
 			"(ProtoExpr List=((ProtoEntry Key=age Value=(ExprStmt X=12)) (ProtoEntry Key=bar Value=(DefStmt Name=bar Body=((ReturnStmt Result=13))))))"},
+		{"$ foo bar", "(ShellExpr Content=(\"foo bar\"))"},
+		{"$ foo bar ${x}", "(ShellExpr Content=(\"foo bar \" x))"},
 	} {
 		e, err := syntax.ParseExpr("foo.star", test.input, 0)
 		var got string
@@ -189,6 +191,12 @@ func TestStmtParseTrees(t *testing.T) {
 			`(AssignStmt Op== LHS=(ParenExpr X=(TupleExpr List=(x y))) RHS=1)`},
 		{`load("", "a", b="c")`,
 			`(LoadStmt Module="" From=(a c) To=(a b))`},
+		{`import foo, bar`,
+			`(ImportStmt Imports=((ImportPackage PackageName="foo" BindingName=foo) (ImportPackage PackageName="bar" BindingName=bar)))`},
+		{`import "github.com/foo", bar`,
+			`(ImportStmt Imports=((ImportPackage PackageName="github.com/foo" BindingName=foo) (ImportPackage PackageName="bar" BindingName=bar)))`},
+		{`import foo as f, bar`,
+			`(ImportStmt Imports=((ImportPackage PackageName="foo" BindingName=f) (ImportPackage PackageName="bar" BindingName=bar)))`},
 		{`if True { load("", "a", b="c") }`, // load needn't be at toplevel
 			`(IfStmt Cond=True True=((LoadStmt Module="" From=(a c) To=(a b))))`},
 		{`def f(x, *args, **kwargs) {
@@ -292,6 +300,14 @@ pass`,
   }
 )`,
 			`(ExprStmt X=(CallExpr Fn=pkg Args=((BinaryExpr X=install Op== Y=(LambdaExpr Stmts=((ExprStmt X=1) (ReturnStmt Result=2)))))))`},
+		{"$ env\n$ foo\n", `(ExprStmt X=(ShellExpr Content=("env")))
+(ExprStmt X=(ShellExpr Content=("foo")))`},
+		{
+			"$ ./configure --disable-dependency-tracking --prefix=${ctx.prefix}\n$ env",
+			`(ExprStmt X=(ShellExpr Content=("./configure --disable-dependency-tracking --prefix=" (DotExpr X=ctx Name=prefix))))
+(ExprStmt X=(ShellExpr Content=("env")))`,
+		},
+		// $ make install`, ""},
 	} {
 		f, err := syntax.Parse("foo.star", test.input, 0)
 		if err != nil {

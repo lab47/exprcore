@@ -574,6 +574,18 @@ func (r *resolver) stmt(stmt syntax.Stmt) {
 				r.errorf(id.NamePos, "cannot reassign top-level %s", id.Name)
 			}
 		}
+	case *syntax.ImportStmt:
+		if r.container().function != nil {
+			r.errorf(stmt.Load, "import statement within a function")
+		}
+
+		for _, i := range stmt.Imports {
+			r.bind(i.BindingName)
+
+			for _, arg := range i.Args {
+				r.expr(arg.Y)
+			}
+		}
 
 	default:
 		log.Panicf("unexpected stmt %T", stmt)
@@ -808,6 +820,11 @@ func (r *resolver) expr(e syntax.Expr) {
 
 	case *syntax.ParenExpr:
 		r.expr(e.X)
+
+	case *syntax.ShellExpr:
+		for _, e := range e.Content {
+			r.expr(e)
+		}
 
 	default:
 		log.Panicf("unexpected expr %T", e)

@@ -714,6 +714,7 @@ func (d *Dict) Delete(k Value) (v Value, found bool, err error) { return d.ht.de
 func (d *Dict) Get(k Value) (v Value, found bool, err error)    { return d.ht.lookup(k) }
 func (d *Dict) Items() []Tuple                                  { return d.ht.items() }
 func (d *Dict) Keys() []Value                                   { return d.ht.keys() }
+func (d *Dict) Values() []Value                                 { return d.ht.values() }
 func (d *Dict) Len() int                                        { return int(d.ht.len) }
 func (d *Dict) Iterate() Iterator                               { return d.ht.iterate() }
 func (d *Dict) SetKey(k, v Value) error                         { return d.ht.insert(k, v) }
@@ -1116,7 +1117,7 @@ func writeValue(out *strings.Builder, x Value, path []Value) {
 		}
 
 	case *Dict:
-		out.WriteString("%{")
+		out.WriteString("{")
 		if pathContains(path, x) {
 			out.WriteString("...") // dict contains itself
 		} else {

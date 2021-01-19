@@ -229,6 +229,14 @@ func (ht *hashtable) keys() []Value {
 	return keys
 }
 
+func (ht *hashtable) values() []Value {
+	values := make([]Value, 0, ht.len)
+	for e := ht.head; e != nil; e = e.next {
+		values = append(values, e.value)
+	}
+	return values
+}
+
 func (ht *hashtable) delete(k Value) (v Value, found bool, err error) {
 	if ht.frozen {
 		return nil, false, fmt.Errorf("cannot delete from frozen hash table")

@@ -14,6 +14,7 @@ package syntax
 import (
 	"log"
 	"strings"
+	"unicode"
 )
 
 // Enable this flag to print the token stream and log.Fatal on the first error.
@@ -194,6 +195,9 @@ func (p *parser) parseStmt2() Stmt {
 	case LOAD:
 		stmt = p.parseLoadStmt()
 
+	case IMPORT:
+		stmt = p.parseImportStmt()
+
 	default:
 		// Assignment
 		x := p.parseExpr(false)
@@ -213,6 +217,50 @@ func (p *parser) parseStmt2() Stmt {
 	p.expectSemi()
 
 	return stmt
+}
+
+func (p *parser) parseShell() *ShellExpr {
+	shellpos := p.nextToken() // consume SHELL
+	val := p.tokval.string
+
+	raw := p.tokval.raw
+	str := &Literal{Token: STRING, TokenPos: shellpos, Raw: raw, Value: val}
+
+	return &ShellExpr{
+		Shell:   shellpos,
+		Content: []Expr{str},
+	}
+}
+
+func (p *parser) parseDynamicShell() *ShellExpr {
+	shellpos := p.nextToken() // consume SHELL
+
+	var content []Expr
+
+	val := p.tokval.string
+	raw := p.tokval.raw
+	str := &Literal{Token: STRING, TokenPos: shellpos, Raw: raw, Value: val}
+	content = append(content, str)
+
+	for p.tok != DSHELL_END {
+		switch p.tok {
+		case DSHELL_PART:
+			val := p.tokval.string
+			raw := p.tokval.raw
+			str := &Literal{Token: STRING, TokenPos: shellpos, Raw: raw, Value: val}
+			content = append(content, str)
+			p.nextToken()
+		default:
+			content = append(content, p.parseExpr(false))
+		}
+	}
+
+	p.consume(DSHELL_END)
+
+	return &ShellExpr{
+		Shell:   shellpos,
+		Content: content,
+	}
 }
 
 func (p *parser) parseDefStmt() *DefStmt {
@@ -434,6 +482,120 @@ func (p *parser) parseLoadStmt() *LoadStmt {
 		To:     to,
 		From:   from,
 		Rparen: rparen,
+	}
+}
+
+// import ruby using version="2.7.2" as r
+// stmt = IMPORT (STRING | IDENTIFIER) (COMMA (STRING | IDENTIFER))*
+func (p *parser) parseImportStmt() *ImportStmt {
+	ec := exprContext{}
+	loadPos := p.nextToken() // consume IMPORT
+
+	var imports []*ImportPackage
+
+	var rparen Position
+
+	for {
+
+		var namespace, name *Literal
+
+		switch p.tok {
+		case STRING:
+			name = p.parsePrimary(ec).(*Literal)
+		case IDENT:
+			id := p.parsePrimary(ec).(*Ident)
+
+			name = &Literal{
+				Token:    STRING,
+				TokenPos: id.NamePos,
+				Raw:      id.Name,
+				Value:    id.Name,
+			}
+		default:
+			p.in.errorf(p.in.pos, "package/namespace must be string or identifer: %v", p.tok)
+		}
+
+		if p.tok == DOT {
+			namespace = name
+			p.consume(DOT)
+
+			switch p.tok {
+			case STRING:
+				name = p.parsePrimary(ec).(*Literal)
+			case IDENT:
+				id := p.parsePrimary(ec).(*Ident)
+
+				name = &Literal{
+					Token:    STRING,
+					TokenPos: id.NamePos,
+					Raw:      id.Name,
+					Value:    id.Name,
+				}
+			default:
+				p.in.errorf(p.in.pos, "package must be string or identifer: %v", p.tok)
+			}
+		}
+
+		var (
+			as   *Ident
+			args []*BinaryExpr
+		)
+
+		if p.tok == USING {
+			p.consume(USING)
+
+			args = p.parseImportArgs(ec)
+		}
+
+		if p.tok == AS {
+			p.consume(AS)
+			if p.tok != IDENT {
+				p.in.errorf(p.in.pos, "binding of package must be identifer")
+			}
+
+			as = p.parsePrimary(ec).(*Ident)
+		} else {
+			notLN := func(r rune) bool {
+				return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+			}
+
+			s := strings.TrimRightFunc(name.Value.(string), notLN)
+
+			idx := strings.LastIndexFunc(s, notLN)
+
+			bind := s
+			if idx != -1 {
+				bind = s[idx+1:]
+			}
+
+			as = &Ident{
+				NamePos: name.TokenPos,
+				Name:    bind,
+			}
+		}
+
+		imports = append(imports, &ImportPackage{
+			Namespace:   namespace,
+			PackageName: name,
+			BindingName: as,
+			Args:        args,
+		})
+
+		if p.tok == COMMA {
+			p.consume(COMMA)
+			continue
+		}
+
+		if p.tok == SEMI {
+			rparen = p.tokval.pos
+			break
+		}
+	}
+
+	return &ImportStmt{
+		Load:    loadPos,
+		Imports: imports,
+		Rparen:  rparen,
 	}
 }
 
@@ -889,6 +1051,50 @@ func (p *parser) parseArgs(ec exprContext) []Expr {
 	return args
 }
 
+// parseArgs parses a list of actual parameter values (arguments).
+// It mirrors the structure of parseParams.
+// arg_list = ((arg COMMA)* arg COMMA?)?
+func (p *parser) parseImportArgs(ec exprContext) []*BinaryExpr {
+	var args []*BinaryExpr
+	for p.tok != RPAREN && p.tok != EOF {
+		if len(args) > 0 {
+			if p.tok == SEMI {
+				break
+			}
+
+			p.consume(COMMA)
+		}
+
+		var arg *BinaryExpr
+
+		// We use a different strategy from Bazel here to stay within LL(1).
+		// Instead of looking ahead two tokens (IDENT, COLON) we parse
+		// 'test = test' then check that the first was an IDENT.
+		x := p.parseTest(ec)
+
+		if p.tok == COLON {
+			// name: value
+			if _, ok := x.(*Ident); !ok {
+				p.in.errorf(p.in.pos, "keyword argument must have form name:expr")
+			}
+			eq := p.nextToken()
+			y := p.parseTest(ec)
+			arg = &BinaryExpr{
+				X:     x,
+				OpPos: eq,
+				Op:    EQ,
+				Y:     y,
+			}
+		} else {
+			p.in.errorf(p.in.pos, "import only accepts keyword arguments")
+		}
+
+		args = append(args, arg)
+	}
+
+	return args
+}
+
 //  primary = IDENT
 //          | INT | FLOAT
 //          | STRING
@@ -1029,7 +1235,12 @@ func (p *parser) parsePrimary(ec exprContext) Expr {
 			Name:    ident.Name,
 			NamePos: ident.NamePos,
 		}
+	case SHELL:
+		return p.parseShell()
+	case DSHELL_START:
+		return p.parseDynamicShell()
 	}
+
 	p.in.errorf(p.in.pos, "got %#v, want primary expression", p.tok)
 	panic("unreachable")
 }

@@ -98,6 +98,7 @@ func (*IfStmt) stmt()     {}
 func (*LoadStmt) stmt()   {}
 func (*ReturnStmt) stmt() {}
 func (*ProtoEntry) stmt() {}
+func (*ImportStmt) stmt() {}
 
 // An AssignStmt represents an assignment:
 //	x = 0
@@ -115,6 +116,17 @@ func (x *AssignStmt) Span() (start, end Position) {
 	start, _ = x.LHS.Span()
 	_, end = x.RHS.Span()
 	return
+}
+
+type ShellExpr struct {
+	commentsRef
+	Shell   Position
+	Content []Expr // param = ident | ident=expr | * | *ident | **ident
+}
+
+func (x *ShellExpr) Span() (start, end Position) {
+	_, end = x.Content[len(x.Content)-1].Span()
+	return x.Shell, end
 }
 
 // A DefStmt represents a function definition.
@@ -187,6 +199,24 @@ func (x *LoadStmt) Span() (start, end Position) {
 // ModuleName returns the name of the module loaded by this statement.
 func (x *LoadStmt) ModuleName() string { return x.Module.Value.(string) }
 
+type ImportPackage struct {
+	Namespace   *Literal
+	PackageName *Literal
+	BindingName *Ident
+	Args        []*BinaryExpr
+}
+
+type ImportStmt struct {
+	commentsRef
+	Load    Position
+	Imports []*ImportPackage
+	Rparen  Position
+}
+
+func (x *ImportStmt) Span() (start, end Position) {
+	return x.Load, x.Rparen
+}
+
 // A BranchStmt changes the flow of control: break, continue, pass.
 type BranchStmt struct {
 	commentsRef
@@ -238,6 +268,7 @@ func (*UnaryExpr) expr()     {}
 func (*AtExpr) expr()        {}
 func (*ProtoExpr) expr()     {}
 func (*ProtoEntry) expr()    {}
+func (*ShellExpr) expr()     {}
 
 // An Ident represents an identifier.
 type Ident struct {

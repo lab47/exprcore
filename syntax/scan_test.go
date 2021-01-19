@@ -44,6 +44,14 @@ func scan(src interface{}) (tokens string, err error) {
 			fmt.Fprintf(&buf, "%e", val.float)
 		case STRING:
 			fmt.Fprintf(&buf, "%q", val.string)
+		case SHELL:
+			fmt.Fprintf(&buf, "shell(`%s`)", val.string)
+		case DSHELL_START:
+			fmt.Fprintf(&buf, "shell(`%s`", val.string)
+		case DSHELL_PART:
+			fmt.Fprintf(&buf, "`%s`", val.string)
+		case DSHELL_END:
+			fmt.Fprintf(&buf, "`%s`)", val.string)
 		default:
 			buf.WriteString(tok.String())
 		}
@@ -257,6 +265,17 @@ pass`, "pass ; pass ; EOF"}, // consecutive newlines are consolidated
 		{"1 + 2\n1", `1 + 2 ; 1 ; EOF`},
 		{"1 + \\\n2\n1", `1 + 2 ; 1 ; EOF`},
 		{"%{ age = 12, bar = 13 }", "%{ age = 12 , bar = 13 } ; EOF"},
+		{"$ foo bar", "shell(`foo bar`) ; EOF"},
+		{"$ env\n$ foo\n", "shell(`env`) ; shell(`foo`) ; EOF"},
+		{"$ env ${x.y}\n$ foo\n", "shell(`env ` x . y ``) ; shell(`foo`) ; EOF"},
+		{"$ foo bar ${x}", "shell(`foo bar ` x ``) ; EOF"},
+		{"$ foo bar ${x} baz ${1+2}", "shell(`foo bar ` x ` baz ` 1 + 2 ``) ; EOF"},
+		{"`foo bar ${x}`", "shell(`foo bar ` x ``) ; EOF"},
+		{"`foo bar ${x} baz ${1+2}`", "shell(`foo bar ` x ` baz ` 1 + 2 ``) ; EOF"},
+		{"import foo, bar", "import foo , bar ; EOF"},
+		{`import "github.com/foo", bar`, `import "github.com/foo" , bar ; EOF`},
+		{"import foo as f, bar", "import foo as f , bar ; EOF"},
+		{`import "github.com/foo" as f, bar`, `import "github.com/foo" as f , bar ; EOF`},
 	} {
 		got, err := scan(test.input)
 		if err != nil {

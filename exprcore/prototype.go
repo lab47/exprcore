@@ -219,11 +219,13 @@ func (s *Prototype) String() string {
 
 	s.forEach(func(k string, v Value) error {
 		if !rest {
-			buf.WriteString(", ")
 			rest = true
+		} else {
+			buf.WriteString(", ")
 		}
+
 		buf.WriteString(k)
-		buf.WriteString(" = ")
+		buf.WriteString(": ")
 		buf.WriteString(v.String())
 		return nil
 	})
@@ -337,6 +339,21 @@ func (s *Prototype) AttrOf(name string, target Value) (Value, error) {
 
 	return nil, NoSuchAttrError(
 		fmt.Sprintf("no .%s field or method", name))
+}
+
+// Helper methods to convert types
+func (s *Prototype) StringAttr(name string) (String, bool, error) {
+	v, err := s.Attr(name)
+	if err != nil {
+		return "", false, err
+	}
+
+	if v == nil {
+		return "", true, nil
+	}
+
+	sv, ok := v.(String)
+	return sv, ok, nil
 }
 
 var ErrFrozen = errors.New("unable to change frozen prototype")

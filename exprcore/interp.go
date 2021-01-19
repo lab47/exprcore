@@ -542,6 +542,66 @@ loop:
 				stack[sp-1-i] = v
 			}
 
+		case compile.IMPORT:
+			ns := string(stack[sp-3].(String))
+			name := string(stack[sp-2].(String))
+
+			if thread.Import == nil {
+				err = fmt.Errorf("import not implemented by this application")
+				break loop
+			}
+
+			var args *Dict
+
+			switch x := stack[sp-1].(type) {
+			case *Dict:
+				args = x
+			}
+
+			val, err2 := thread.Import(thread, ns, name, args)
+			if err2 != nil {
+				err = wrappedError{
+					msg:   fmt.Sprintf("cannot import %s: %v", name, err2),
+					cause: err2,
+				}
+				break loop
+			}
+			stack[sp-3] = val
+
+			sp -= 2
+
+		case compile.SHELL:
+			var parts []string
+
+			for i := uint32(0); i < arg; i++ {
+				s, ok := stack[sp-1-int(i)].(String)
+				if !ok {
+					err = fmt.Errorf("shell only accepts strings")
+					break loop
+				}
+
+				parts = append(parts, string(s))
+			}
+
+			sp -= int(arg)
+
+			if thread.Shell == nil {
+				err = fmt.Errorf("shell not implemented by this application")
+				break loop
+			}
+
+			val, err2 := thread.Shell(thread, parts)
+			if err2 != nil {
+				err = wrappedError{
+					msg:   fmt.Sprintf("error executing shell: %v", err2),
+					cause: err2,
+				}
+				break loop
+			}
+
+			stack[sp] = val
+			sp++
+
 		case compile.SETLOCAL:
 			locals[arg] = stack[sp-1]
 			sp--

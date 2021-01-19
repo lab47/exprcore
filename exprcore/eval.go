@@ -5,6 +5,7 @@
 package exprcore
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -22,6 +23,8 @@ import (
 	"github.com/lab47/exprcore/resolve"
 	"github.com/lab47/exprcore/syntax"
 )
+
+var CallContinue = errors.New("continue call")
 
 // A Thread contains the state of a exprcore thread,
 // such as its call stack and thread-local storage.
@@ -45,6 +48,14 @@ type Thread struct {
 	//
 	// See example_test.go for some example implementations of Load.
 	Load func(thread *Thread, module string) (StringDict, error)
+
+	Import func(thread *Thread, namespace, pkg string, args *Dict) (Value, error)
+
+	Shell func(thread *Thread, parts []string) (Value, error)
+
+	// A function to call before every call. if err is CallContinue, the
+	// original call is performed, otherwise the value and error are returned.
+	CallTrace func(thread *Thread, c Callable, args Tuple, kwargs []Tuple) (Value, error)
 
 	// locals holds arbitrary "thread-local" Go values belonging to the client.
 	// They are accessible to the client but not to any exprcore program.
@@ -131,6 +142,25 @@ func (d StringDict) Freeze() {
 
 // Has reports whether the dictionary contains the specified key.
 func (d StringDict) Has(key string) bool { _, ok := d[key]; return ok }
+
+func (d StringDict) Attr(name string) (Value, error) {
+	val, ok := d[name]
+	if !ok {
+		return nil, NoSuchAttrError(fmt.Sprintf("no .%s field or method", name))
+	}
+
+	return val, nil
+}
+
+func (d StringDict) AttrNames() []string {
+	var keys []string
+
+	for k := range d {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
 
 // A frame records a call to a exprcore function (including module toplevel)
 // or a built-in function or method.
@@ -287,7 +317,7 @@ func ExecFile(thread *Thread, filename string, src interface{}, predeclared Stri
 		return nil, err
 	}
 
-	g, err := mod.Init(thread, predeclared)
+	g, _, err := mod.Init(thread, predeclared)
 	g.Freeze()
 	return g, err
 }
@@ -356,14 +386,14 @@ func CompiledProgram(in io.Reader) (*Program, error) {
 // Init creates a set of global variables for the program,
 // executes the toplevel code of the specified program,
 // and returns a new, unfrozen dictionary of the globals.
-func (prog *Program) Init(thread *Thread, predeclared StringDict) (StringDict, error) {
+func (prog *Program) Init(thread *Thread, predeclared StringDict) (StringDict, Value, error) {
 	toplevel := makeToplevelFunction(prog.compiled, predeclared)
 
-	_, err := Call(thread, toplevel, nil, nil)
+	top, err := Call(thread, toplevel, nil, nil)
 
 	// Convert the global environment to a map.
 	// We return a (partial) map even in case of error.
-	return toplevel.Globals(), err
+	return toplevel.Globals(), top, err
 }
 
 // ExecREPLChunk compiles and executes file f in the specified thread
@@ -1082,7 +1112,20 @@ func Call(thread *Thread, fn Value, args Tuple, kwargs []Tuple) (Value, error) {
 	fr.callable = c
 
 	thread.beginProfSpan()
-	result, err := c.CallInternal(thread, args, kwargs)
+	var (
+		result Value
+		err    error
+	)
+
+	if thread.CallTrace != nil {
+		result, err = thread.CallTrace(thread, c, args, kwargs)
+		if err == CallContinue {
+			result, err = c.CallInternal(thread, args, kwargs)
+		}
+	} else {
+		result, err = c.CallInternal(thread, args, kwargs)
+	}
+
 	thread.endProfSpan()
 
 	// Sanity check: nil is not a valid exprcore value.

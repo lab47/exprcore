@@ -29,14 +29,17 @@ package compile // import "github.com/lab47/exprcore/internal/compile"
 import (
 	"bytes"
 	"fmt"
+	"hash"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"sync"
 
 	"github.com/lab47/exprcore/resolve"
 	"github.com/lab47/exprcore/syntax"
+	"golang.org/x/crypto/blake2b"
 )
 
 // Disassemble causes the assembly code for each function
@@ -115,6 +118,7 @@ const (
 	SETPROTOKEY //      proto k v SETDICTUNIQ -
 	SETCELL     //     value cell SETCELL     -
 	CELL        //           cell CELL        value
+	IMPORT      //   ns name args IMPORT              value
 
 	// --- opcodes with an argument must go below this line ---
 
@@ -140,6 +144,8 @@ const (
 	ATTR        //                 x ATTR<name>          y           y = x.name
 	SETFIELD    //               x y SETFIELD<name>      -           x.name = y
 	UNPACK      //          iterable UNPACK<n>           vn ... v1
+
+	SHELL //         x1 ... xn SHELL               value
 
 	// n>>8 is #positional args and n&0xff is #named args (pairs).
 	CALL        // fn positional named                CALL<n>        result
@@ -221,6 +227,8 @@ var opcodeNames = [...]string{
 	UNIVERSAL:   "universal",
 	UNPACK:      "unpack",
 	UPLUS:       "uplus",
+	SHELL:       "shell",
+	IMPORT:      "import",
 }
 
 const variableStackEffect = 0x7f
@@ -258,6 +266,7 @@ var stackEffect = [...]int8{
 	JMP:         0,
 	LE:          -1,
 	LOAD:        -1,
+	IMPORT:      -2,
 	LOCAL:       +1,
 	LT:          -1,
 	LTLT:        -1,
@@ -266,6 +275,7 @@ var stackEffect = [...]int8{
 	MAKEFUNC:    0,
 	MAKELIST:    variableStackEffect,
 	MAKETUPLE:   variableStackEffect,
+	SHELL:       variableStackEffect,
 	MANDATORY:   +1,
 	MINUS:       -1,
 	NEQ:         -1,
@@ -338,6 +348,8 @@ type Funcode struct {
 	NumKwonlyParams       int
 	HasVarargs, HasKwargs bool
 	SubFunctions          []uint32
+	Constants             []int
+	Signature             []byte
 
 	// -- transient state --
 
@@ -373,6 +385,10 @@ type fcomp struct {
 	pos   syntax.Position // current position of generated code
 	loops []loop
 	block *block
+
+	constants map[uint32]struct{}
+
+	h hash.Hash
 }
 
 type loop struct {
@@ -506,6 +522,8 @@ func File(stmts []syntax.Stmt, pos syntax.Position, name string, locals, globals
 }
 
 func (pcomp *pcomp) function(name string, pos syntax.Position, stmts []syntax.Stmt, locals, freevars []*resolve.Binding) *Funcode {
+	h, _ := blake2b.New256(nil)
+
 	fcomp := &fcomp{
 		pcomp: pcomp,
 		pos:   pos,
@@ -517,6 +535,8 @@ func (pcomp *pcomp) function(name string, pos syntax.Position, stmts []syntax.St
 			Locals:   bindings(locals),
 			Freevars: bindings(freevars),
 		},
+		constants: make(map[uint32]struct{}),
+		h:         h,
 	}
 
 	// Record indices of locals that require cells.
@@ -535,7 +555,10 @@ func (pcomp *pcomp) function(name string, pos syntax.Position, stmts []syntax.St
 	fcomp.block = entry
 	fcomp.stmts(stmts)
 	if fcomp.block != nil {
-		fcomp.emit(NONE)
+		if len(fcomp.block.insns) == 0 {
+			fcomp.emit(NONE)
+		}
+
 		fcomp.emit(RETURN)
 	}
 
@@ -594,6 +617,7 @@ func (pcomp *pcomp) function(name string, pos syntax.Position, stmts []syntax.St
 			if debug {
 				fmt.Fprintln(os.Stderr, "\t", insn.op, stack, stack+se)
 			}
+
 			stack += se
 			if stack < 0 {
 				fmt.Fprintf(os.Stderr, "After pc=%d: stack underflow\n", pc)
@@ -656,11 +680,23 @@ func (pcomp *pcomp) function(name string, pos syntax.Position, stmts []syntax.St
 	fn := fcomp.fn
 	fn.MaxStack = maxstack
 
+	var constants []int
+
+	for k := range fcomp.constants {
+		constants = append(constants, int(k))
+	}
+
+	sort.Ints(constants)
+
+	fn.Constants = constants
+
 	// Emit bytecode (and position table).
 	if Disassemble {
 		fmt.Fprintf(os.Stderr, "Function %s: (%d blocks, %d bytes)\n", name, len(blocks), pc)
 	}
 	fcomp.generate(blocks, pc)
+
+	fn.Signature = fcomp.h.Sum(nil)
 
 	if debug {
 		fmt.Fprintf(os.Stderr, "code=%d maxstack=%d\n", fn.Code, fn.MaxStack)
@@ -715,7 +751,7 @@ func (insn *insn) stackeffect() int {
 			//  0 for cjmp/true/exhausted
 			// Handled specially in caller.
 			se = 0
-		case MAKELIST, MAKETUPLE:
+		case MAKELIST, MAKETUPLE, SHELL:
 			se = 1 - arg
 		case UNPACK:
 			se = arg - 1
@@ -783,6 +819,31 @@ func (fcomp *fcomp) generate(blocks []*block, codelen uint32) {
 						filepath.Base(fcomp.fn.Pos.Filename()), insn.line, insn.col)
 				}
 			}
+
+			switch insn.op {
+			case CONSTANT:
+				fmt.Fprintf(fcomp.h, "%d:%s\n", insn.op, fcomp.fn.Prog.Constants[insn.arg])
+			case SETGLOBAL, GLOBAL:
+				fmt.Fprintf(fcomp.h, "%d:%s\n", insn.op, fcomp.fn.Prog.Globals[insn.arg].Name)
+			case ATTR, SETFIELD, PREDECLARED, UNIVERSAL, AT:
+				fmt.Fprintf(fcomp.h, "%d:%s\n", insn.op, fcomp.fn.Prog.Names[insn.arg])
+			case FREE:
+				fmt.Fprintf(fcomp.h, "%d:%s\n", insn.op, fcomp.fn.Freevars[insn.arg].Name)
+			case MAKEFUNC:
+				// We write the signature of the sub function here, to avoid changing
+				// if the same function gets moved in the program function list.
+				fmt.Fprintf(fcomp.h, "%d:-\n", insn.op)
+
+				subfn := fcomp.fn.Prog.Functions[insn.arg]
+				if len(subfn.Signature) == 0 {
+					panic("signature not set on subfn")
+				}
+
+				fcomp.h.Write(subfn.Signature)
+			default:
+				fmt.Fprintf(fcomp.h, "%d:%d\n", insn.op, insn.arg)
+			}
+
 			if Disassemble {
 				PrintOp(fcomp.fn, pc, insn.op, insn.arg)
 			}
@@ -984,7 +1045,9 @@ func (pcomp *pcomp) functionIndex(fn *Funcode) uint32 {
 
 // string emits code to push the specified string.
 func (fcomp *fcomp) string(s string) {
-	fcomp.emit1(CONSTANT, fcomp.pcomp.constantIndex(s))
+	idx := fcomp.pcomp.constantIndex(s)
+	fcomp.constants[idx] = struct{}{}
+	fcomp.emit1(CONSTANT, idx)
 }
 
 // setPos sets the current source position.
@@ -1041,7 +1104,11 @@ func (fcomp *fcomp) lookup(id *syntax.Ident) {
 }
 
 func (fcomp *fcomp) stmts(stmts []syntax.Stmt) {
-	for _, stmt := range stmts {
+	for i, stmt := range stmts {
+		if i != 0 {
+			fcomp.emit(POP)
+		}
+
 		fcomp.stmt(stmt)
 	}
 }
@@ -1054,7 +1121,6 @@ func (fcomp *fcomp) stmt(stmt syntax.Stmt) {
 			return
 		}
 		fcomp.expr(stmt.X)
-		fcomp.emit(POP)
 
 	case *syntax.BranchStmt:
 		// Resolver invariant: break/continue appear only within loops.
@@ -1084,7 +1150,11 @@ func (fcomp *fcomp) stmt(stmt syntax.Stmt) {
 		fcomp.jump(done)
 
 		fcomp.block = f
-		fcomp.stmts(stmt.False)
+		if len(stmt.False) == 0 {
+			fcomp.emit(NONE)
+		} else {
+			fcomp.stmts(stmt.False)
+		}
 		fcomp.jump(done)
 
 		fcomp.block = done
@@ -1094,6 +1164,7 @@ func (fcomp *fcomp) stmt(stmt syntax.Stmt) {
 		case syntax.EQ:
 			// simple assignment: x = y
 			fcomp.expr(stmt.RHS)
+			fcomp.emit(DUP)
 			fcomp.assign(stmt.OpPos, stmt.LHS)
 
 		case syntax.PLUS_EQ,
@@ -1157,11 +1228,13 @@ func (fcomp *fcomp) stmt(stmt syntax.Stmt) {
 			} else {
 				fcomp.binop(stmt.OpPos, stmt.Op-syntax.PLUS_EQ+syntax.PLUS)
 			}
+			fcomp.emit(DUP)
 			set()
 		}
 
 	case *syntax.DefStmt:
 		fcomp.function(stmt.Function.(*resolve.Function))
+		fcomp.emit(DUP)
 		fcomp.set(stmt.Name)
 
 	case *syntax.ForStmt:
@@ -1182,11 +1255,13 @@ func (fcomp *fcomp) stmt(stmt syntax.Stmt) {
 		fcomp.assign(stmt.For, stmt.Vars)
 		fcomp.loops = append(fcomp.loops, loop{break_: tail, continue_: head})
 		fcomp.stmts(stmt.Body)
+		fcomp.emit(POP)
 		fcomp.loops = fcomp.loops[:len(fcomp.loops)-1]
 		fcomp.jump(head)
 
 		fcomp.block = tail
 		fcomp.emit(ITERPOP)
+		fcomp.emit(NONE)
 
 	case *syntax.WhileStmt:
 		head := fcomp.newBlock()
@@ -1204,6 +1279,7 @@ func (fcomp *fcomp) stmt(stmt syntax.Stmt) {
 		fcomp.jump(head)
 
 		fcomp.block = done
+		fcomp.emit(NONE)
 
 	case *syntax.ReturnStmt:
 		if stmt.Result != nil {
@@ -1211,6 +1287,7 @@ func (fcomp *fcomp) stmt(stmt syntax.Stmt) {
 		} else {
 			fcomp.emit(NONE)
 		}
+		fcomp.emit(DUP)
 		fcomp.emit(RETURN)
 		fcomp.block = fcomp.newBlock() // dead code
 
@@ -1229,6 +1306,41 @@ func (fcomp *fcomp) stmt(stmt syntax.Stmt) {
 		for i := range stmt.To {
 			fcomp.set(stmt.To[len(stmt.To)-1-i])
 		}
+		fcomp.emit(NONE)
+
+	case *syntax.ImportStmt:
+		for _, i := range stmt.Imports {
+			pkg := i.PackageName
+			name := pkg.Value.(string)
+			fcomp.pcomp.prog.Loads = append(fcomp.pcomp.prog.Loads, Binding{
+				Name: name,
+				Pos:  pkg.TokenPos,
+			})
+
+			if i.Namespace == nil {
+				fcomp.string("")
+			} else {
+				fcomp.string(i.Namespace.Value.(string))
+			}
+
+			fcomp.string(name)
+			fcomp.setPos(stmt.Load)
+			if len(i.Args) == 0 {
+				fcomp.emit(NONE)
+			} else {
+				fcomp.emit(MAKEDICT)
+				for _, arg := range i.Args {
+					fcomp.emit(DUP)
+					fcomp.string(arg.X.(*syntax.Ident).Name)
+					fcomp.expr(arg.Y)
+					fcomp.setPos(arg.OpPos)
+					fcomp.emit(SETDICTUNIQ)
+				}
+			}
+			fcomp.emit(IMPORT)
+			fcomp.set(i.BindingName)
+		}
+		fcomp.emit(NONE)
 
 	default:
 		start, _ := stmt.Span()
@@ -1295,7 +1407,9 @@ func (fcomp *fcomp) expr(e syntax.Expr) {
 
 	case *syntax.Literal:
 		// e.Value is int64, float64, *bigInt, or string.
-		fcomp.emit1(CONSTANT, fcomp.pcomp.constantIndex(e.Value))
+		idx := fcomp.pcomp.constantIndex(e.Value)
+		fcomp.constants[idx] = struct{}{}
+		fcomp.emit1(CONSTANT, idx)
 
 	case *syntax.ListExpr:
 		for _, x := range e.List {
@@ -1373,7 +1487,12 @@ func (fcomp *fcomp) expr(e syntax.Expr) {
 		for _, entry := range e.List {
 			entry := entry.(*syntax.ProtoEntry)
 			fcomp.emit(DUP)
-			fcomp.emit1(CONSTANT, fcomp.pcomp.constantIndex(entry.Key.(*syntax.Ident).Name))
+
+			idx := fcomp.pcomp.constantIndex(entry.Key.(*syntax.Ident).Name)
+			fcomp.constants[idx] = struct{}{}
+
+			fcomp.emit1(CONSTANT, idx)
+
 			switch v := entry.Value.(type) {
 			case *syntax.ExprStmt:
 				fcomp.expr(v.X)
@@ -1464,6 +1583,9 @@ func (fcomp *fcomp) expr(e syntax.Expr) {
 	case *syntax.AtExpr:
 		fcomp.setPos(e.OpPos)
 		fcomp.emit1(AT, fcomp.pcomp.nameIndex(e.Name))
+
+	case *syntax.ShellExpr:
+		fcomp.shell(e)
 
 	default:
 		start, _ := e.Span()
@@ -1652,6 +1774,14 @@ func (fcomp *fcomp) binop(pos syntax.Position, op syntax.Token) {
 	default:
 		log.Panicf("%s: unexpected binary op: %s", pos, op)
 	}
+}
+
+func (fcomp *fcomp) shell(shell *syntax.ShellExpr) {
+	for _, x := range shell.Content {
+		fcomp.expr(x)
+	}
+
+	fcomp.emit1(SHELL, uint32(len(shell.Content)))
 }
 
 func (fcomp *fcomp) call(call *syntax.CallExpr) {

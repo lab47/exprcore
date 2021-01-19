@@ -36,6 +36,11 @@ const (
 	FLOAT  // 1.23e45
 	STRING // "foo" or 'foo' or '''foo''' or r'foo' or r"foo"
 
+	SHELL        //  $ foo bar
+	DSHELL_START // the start of a shell expression with expandation
+	DSHELL_PART  // an expandation within a shell expression
+	DSHELL_END   // the end of a DSHELL
+
 	// Punctuation
 	PLUS          // +
 	MINUS         // -
@@ -94,6 +99,9 @@ const (
 	IN
 	LAMBDA
 	LOAD
+	IMPORT
+	AS
+	USING
 	NOT
 	NOT_IN // synthesized by parser from NOT IN
 	OR
@@ -125,6 +133,10 @@ var tokenNames = [...]string{
 	INT:           "int literal",
 	FLOAT:         "float literal",
 	STRING:        "string literal",
+	SHELL:         "a shell expression",
+	DSHELL_START:  "the start of a dynamic shell expression",
+	DSHELL_PART:   "part of a dynamic shell expression",
+	DSHELL_END:    "the end of a dynamic shell expression",
 	PLUS:          "+",
 	MINUS:         "-",
 	STAR:          "*",
@@ -180,6 +192,9 @@ var tokenNames = [...]string{
 	IN:            "in",
 	LAMBDA:        "lambda",
 	LOAD:          "load",
+	IMPORT:        "import",
+	AS:            "as",
+	USING:         "using",
 	NOT:           "not",
 	NOT_IN:        "not in",
 	OR:            "or",
@@ -252,6 +267,9 @@ type scanner struct {
 	suffixComments []Comment // list of suffix comments (if keepComments)
 
 	insertSemi bool // insert a semicolon before next newline
+
+	interpDepth     int // how far inside ${'s we are
+	interpExprDepth int // how far inside `'s we are
 
 	readline func() ([]byte, error) // read next line of input (REPL only)
 }
@@ -660,6 +678,24 @@ start:
 		return sc.scanString(val, c)
 	}
 
+	if c == '`' {
+		tok := sc.scanShellExpr(val)
+		if tok == SHELL {
+			insertSemi = true
+		}
+
+		return tok
+	}
+
+	if c == '$' {
+		tok := sc.scanShell(val)
+		if tok == SHELL {
+			insertSemi = true
+		}
+
+		return tok
+	}
+
 	// identifier or keyword
 	if isIdentStart(c) {
 		// raw string literal
@@ -705,6 +741,26 @@ start:
 		panic("unreachable")
 
 	case ']', ')', '}':
+		if c == '}' {
+			if sc.interpDepth > 0 {
+				tok := sc.scanMoreShell(val)
+				if tok == DSHELL_END {
+					insertSemi = true
+				}
+
+				return tok
+			}
+
+			if sc.interpExprDepth > 0 {
+				tok := sc.scanMoreShellExpr(val)
+				if tok == DSHELL_END {
+					insertSemi = true
+				}
+
+				return tok
+			}
+		}
+
 		if sc.depth == 0 {
 			sc.errorf(sc.pos, "unexpected %q", c)
 		} else {
@@ -857,6 +913,201 @@ start:
 
 	sc.errorf(sc.pos, "unexpected input character %#q", c)
 	panic("unreachable")
+}
+
+func (sc *scanner) scanShellExpr(val *tokenValue) Token {
+	sc.readRune()
+
+	var (
+		raw       strings.Builder
+		hasExpand bool
+	)
+
+	for sc.peekRune() == ' ' {
+		sc.readRune()
+	}
+
+	for {
+		if sc.eof() {
+			break
+		}
+
+		c := sc.readRune()
+		if c == '`' {
+			break
+		}
+
+		if c == '$' {
+			nc := sc.peekRune()
+			if nc == '{' {
+				sc.readRune()
+				sc.interpExprDepth++
+				hasExpand = true
+				break
+			}
+		} else if c == '\\' {
+			if sc.eof() {
+				sc.error(val.pos, "unexpected EOF in string")
+			}
+			c = sc.readRune()
+		}
+
+		raw.WriteRune(c)
+	}
+
+	val.string = raw.String()
+
+	if hasExpand {
+		return DSHELL_START
+	} else {
+		return SHELL
+	}
+}
+
+func (sc *scanner) scanShell(val *tokenValue) Token {
+	sc.readRune()
+
+	var (
+		raw       strings.Builder
+		hasExpand bool
+	)
+
+	for sc.peekRune() == ' ' {
+		sc.readRune()
+	}
+
+	for {
+		if sc.eof() {
+			break
+		}
+
+		c := sc.peekRune()
+		if c == '\n' {
+			break
+		}
+
+		sc.readRune()
+		if c == '$' {
+			nc := sc.peekRune()
+			if nc == '{' {
+				sc.readRune()
+				sc.interpDepth++
+				hasExpand = true
+				break
+			}
+		} else if c == '\\' {
+			if sc.eof() {
+				sc.error(val.pos, "unexpected EOF in string")
+			}
+			c = sc.readRune()
+		}
+
+		raw.WriteRune(c)
+	}
+
+	val.string = raw.String()
+
+	if hasExpand {
+		return DSHELL_START
+	} else {
+		return SHELL
+	}
+}
+
+func (sc *scanner) scanMoreShell(val *tokenValue) Token {
+	sc.interpDepth--
+
+	sc.readRune()
+
+	var (
+		raw       strings.Builder
+		hasExpand bool
+	)
+
+	for {
+		if sc.eof() {
+			break
+		}
+
+		c := sc.peekRune()
+		if c == '\n' {
+			break
+		}
+
+		sc.readRune()
+
+		if c == '$' {
+			nc := sc.peekRune()
+			if nc == '{' {
+				sc.readRune()
+				sc.interpDepth++
+				hasExpand = true
+				break
+			}
+		} else if c == '\\' {
+			if sc.eof() {
+				sc.error(val.pos, "unexpected EOF in string")
+			}
+			c = sc.readRune()
+		}
+
+		raw.WriteRune(c)
+	}
+
+	val.string = raw.String()
+
+	if !hasExpand {
+		return DSHELL_END
+	} else {
+		return DSHELL_PART
+	}
+}
+
+func (sc *scanner) scanMoreShellExpr(val *tokenValue) Token {
+	sc.interpDepth--
+
+	sc.readRune()
+
+	var (
+		raw       strings.Builder
+		hasExpand bool
+	)
+
+	for {
+		if sc.eof() {
+			sc.error(val.pos, "unexpected EOF in string")
+		}
+
+		c := sc.readRune()
+		if c == '`' {
+			break
+		}
+
+		if c == '$' {
+			nc := sc.peekRune()
+			if nc == '{' {
+				sc.readRune()
+				sc.interpExprDepth++
+				hasExpand = true
+				break
+			}
+		} else if c == '\\' {
+			if sc.eof() {
+				sc.error(val.pos, "unexpected EOF in string")
+			}
+			c = sc.readRune()
+		}
+
+		raw.WriteRune(c)
+	}
+
+	val.string = raw.String()
+
+	if !hasExpand {
+		return DSHELL_END
+	} else {
+		return DSHELL_PART
+	}
 }
 
 func (sc *scanner) scanString(val *tokenValue, quote rune) Token {
@@ -1129,6 +1380,9 @@ var keywordToken = map[string]Token{
 	"in":       IN,
 	"lambda":   LAMBDA,
 	"load":     LOAD,
+	"import":   IMPORT,
+	"as":       AS,
+	"using":    USING,
 	"not":      NOT,
 	"or":       OR,
 	"pass":     PASS,
@@ -1136,7 +1390,6 @@ var keywordToken = map[string]Token{
 	"while":    WHILE,
 
 	// reserved words:
-	"as": ILLEGAL,
 	// "assert":   ILLEGAL, // heavily used by our tests
 	"class":    ILLEGAL,
 	"del":      ILLEGAL,
@@ -1144,7 +1397,6 @@ var keywordToken = map[string]Token{
 	"finally":  ILLEGAL,
 	"from":     ILLEGAL,
 	"global":   ILLEGAL,
-	"import":   ILLEGAL,
 	"is":       ILLEGAL,
 	"nonlocal": ILLEGAL,
 	"raise":    ILLEGAL,
