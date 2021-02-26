@@ -102,7 +102,7 @@ var (
 	AllowLambda         = false // allow lambda expressions
 	AllowFloat          = false // allow floating point literals, the 'float' built-in, and x / y
 	AllowSet            = false // allow the 'set' built-in
-	AllowGlobalReassign = false // allow reassignment to top-level names; also, allow if/for/while at top-level
+	AllowGlobalReassign = true  // allow reassignment to top-level names; also, allow if/for/while at top-level
 	AllowRecursion      = false // allow while statements and recursive functions
 	AllowBitwise        = true  // obsolete; bitwise operations (&, |, ^, ~, <<, and >>) are always enabled
 	LoadBindsGlobally   = false // load creates global not file-local bindings (deprecated)
