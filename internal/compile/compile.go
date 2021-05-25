@@ -1146,7 +1146,11 @@ func (fcomp *fcomp) stmt(stmt syntax.Stmt) {
 		fcomp.ifelse(stmt.Cond, t, f)
 
 		fcomp.block = t
-		fcomp.stmts(stmt.True)
+		if len(stmt.True) == 0 {
+			fcomp.emit(NONE)
+		} else {
+			fcomp.stmts(stmt.True)
+		}
 		fcomp.jump(done)
 
 		fcomp.block = f
